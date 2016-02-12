@@ -3,6 +3,7 @@ querystring = require 'querystring'
 WebSocket   = require 'ws'
 Log            = require 'log'
 {EventEmitter} = require 'events'
+pingInterval = 60000
 
 User = require './user.coffee'
 
@@ -16,7 +17,6 @@ class Client extends EventEmitter
         @channels = {}
         @users = {}
 
-        @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v1/websocket'
 
         @ws = null
         @_messageID = 0
@@ -39,6 +39,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
+                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v1/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
@@ -61,19 +62,21 @@ class Client extends EventEmitter
             @emit 'error', error
 
         @ws.on 'open', =>
+            @connected = true
+            @emit 'connected'
             @_connAttempts = 0
             @_lastPong = Date.now()
             @_pongTimeout = setInterval =>
                 if not @connected then return
 
                 @logger.debug 'ping'
-                @_send {"type": "ping"}
-                if @_lastPong? and Date.now() - @_lastPong > 10000
+                @_send {"action": "ping"}
+                if @_lastPong? and Date.now() - @_lastPong > (2*pingInterval)
                     @logger.error "Last pong is too old: %d", (Date.now() - @_lastPong) / 1000
                     @authenticated = false
                     @connected = false
                     @reconnect()
-            , 5000
+            , pingInterval
 
         @ws.on 'message', (data, flags) =>
             @onMessage JSON.parse(data)
@@ -119,8 +122,10 @@ class Client extends EventEmitter
         @emit 'raw_message', message
 
         switch message.action
-            when "blaat"
-                @emit "blaat"
+            when 'ping'
+                @logger.debug 'ACK ping'
+                @_lastPong = Date.now()
+                @emit 'ping'
             else
                 @logger.info 'Received message type: '+message.action
                 @logger.info message
