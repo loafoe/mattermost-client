@@ -28,7 +28,7 @@ class Client extends EventEmitter
 
     login: ->
         @logger.info 'Logging in...'
-        @_apiCall '/users/login', {name: @group, email: @email, password: @password}, @_onLogin
+        @_apiCall 'POST', '/users/login', {name: @group, email: @email, password: @password}, @_onLogin
 
     _onLogin: (data, headers) =>
         if data
@@ -40,21 +40,31 @@ class Client extends EventEmitter
                 # Continue happy flow here
                 @token = headers.token
                 @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v1/websocket'
-                @logger.info 'Websocket URL: ' + @socketUrl
+                @logger.debug 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
+                # Load userlist
+                @_apiCall 'GET', '/users/profiles', null, @_onProfiles
+
                 @connect()
         else
             @emit 'error', data
             @authenticated = false
             @reconnect()
+    
+    _onProfiles: (data, headers) =>
+        if data
+            @users = data
+            @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
+        else
+            @logger.error 'Failed to load profiles from server.'
+            @emit 'error', { msg: 'failed to load profiles'}
 
     connect: ->
         @logger.info 'Connecting...'
         options =
             headers: {authorization: "BEARER " + @token}
 
-        @logger.info 'Opening WebSocket: ' + JSON.stringify(options)
         # Set up websocket connection to server
         @ws = new WebSocket @socketUrl, options
 
@@ -142,15 +152,18 @@ class Client extends EventEmitter
             return message
 
 
-    _apiCall: (method, params, callback) ->
-        post_data = JSON.stringify(params)
+    _apiCall: (method, path, params, callback) ->
+        post_data = ''
+        post_data = JSON.stringify(params) if params?
         options =
             hostname: @host
-            method: 'POST'
-            path: '/api/v1' + method
+            method: method
+            path: '/api/v1' + path
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': post_data.length
+        options.headers['Authorization'] = 'BEARER '+@token if @token
+
         req = https.request(options)
 
         req.on 'response', (res) =>
