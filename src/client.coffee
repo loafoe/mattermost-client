@@ -175,6 +175,19 @@ class Client extends EventEmitter
     getChannelByID: (id) ->
         @channels[id]
 
+    postMessage: (msg, channelID) ->
+        postData =
+            message: msg
+            filenames: []
+            create_at: Date.now()
+            user_id: @self.id
+            channel_id: channelID
+
+        @_apiCall 'POST', '/channels/' + channelID + '/create', postData, (data, header) =>
+            @logger.debug 'Posted message.'
+            return true
+
+
     # Private functions
     #
     _send: (message) ->
