@@ -6,6 +6,7 @@ Log            = require 'log'
 pingInterval = 60000
 
 User = require './user.coffee'
+Message = require './message.coffee'
 
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
@@ -16,7 +17,7 @@ class Client extends EventEmitter
         @self = null
         @channels = {}
         @users = {}
-
+        @teams = {}
 
         @ws = null
         @_messageID = 0
@@ -45,13 +46,22 @@ class Client extends EventEmitter
                 @emit 'loggedIn', @self
                 # Load userlist
                 @_apiCall 'GET', '/users/profiles', null, @_onProfiles
-
+                @_apiCall 'GET', '/channels/', null, @_onChannels
+                @_apiCall 'GET', '/teams/me', null, @_onTeams
                 @connect()
         else
             @emit 'error', data
             @authenticated = false
             @reconnect()
-    
+
+    _onTeams: (data, headers) =>
+        if data
+            @teams = data
+            @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
+        else
+            @logger.error 'Failed to load teams from server.'
+            @emit 'error', { msg: 'failed to load teams.' }
+
     _onProfiles: (data, headers) =>
         if data
             @users = data
@@ -59,6 +69,15 @@ class Client extends EventEmitter
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
+    
+    _onChannels: (data, headers) =>
+        if data
+            @channels = data.members
+            @logger.debug 'Found '+Object.keys(@channels).length+' channels.'
+            @channel_details = data.channels
+        else
+            @logger.error 'Failed to get subscribed channels list from server.'
+            @emit 'error', { msg: 'failed to get channel list'}
 
     connect: ->
         @logger.info 'Connecting...'
@@ -136,9 +155,25 @@ class Client extends EventEmitter
                 @logger.debug 'ACK ping'
                 @_lastPong = Date.now()
                 @emit 'ping'
+            when 'posted'
+                m = new Message @, message
+                @emit 'message', m
+            when 'typing'
+                @emit 'typing', @getUserByID message.user_id, message
             else
-                @logger.info 'Received message type: '+message.action
-                @logger.info message
+                @logger.debug 'Received unhandled message type: '+message.action
+                @logger.debug message
+
+    getUserByID: (id) ->
+        @users[id]
+
+    getUserByEmail: (email) ->
+        for u of @users
+            if @users[u].email == email
+                return @users[u]
+
+    getChannelByID: (id) ->
+        @channels[id]
 
     # Private functions
     #
