@@ -149,17 +149,24 @@ class Client extends EventEmitter
 
     onMessage: (message) ->
         @emit 'raw_message', message
-
+        m = new Message @, message
         switch message.action
             when 'ping'
                 @logger.debug 'ACK ping'
                 @_lastPong = Date.now()
                 @emit 'ping'
             when 'posted'
-                m = new Message @, message
                 @emit 'message', m
-            when 'typing'
-                @emit 'typing', @getUserByID message.user_id, message
+            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed'
+                # Generic hadler
+                @emit message.action, message
+            when 'channel_viewed', 'preference_changed', 'ephemeral_message'
+                # These are personal messages
+                @emit message.action, message
+            when 'new_user'
+                # Reload all users for now as, /users/profiles/{id} gives us a 403 currently
+                @_apiCall 'GET', '/users/profiles', null, @_onProfiles
+                @emit 'new_user', message
             else
                 @logger.debug 'Received unhandled message type: '+message.action
                 @logger.debug message
