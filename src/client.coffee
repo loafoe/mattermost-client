@@ -67,6 +67,7 @@ class Client extends EventEmitter
         if data
             @users = data
             @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
+            @emit 'profilesLoaded', { profiles: @users }
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
