@@ -24,7 +24,8 @@
     "coffee-script": "^1.10.0",
     "https-proxy-agent": "^1.0.0",
     "log": "^1.4.0",
-    "ws": "^1.0.1"
+    "ws": "^1.0.1",
+    "text-encoding": "^0.5.5"
   },
   "engines": {
       "node": ">= 0.10.x",
