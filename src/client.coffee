@@ -22,7 +22,8 @@ class Client extends EventEmitter
         @ws = null
         @_messageID = 0
         @_pending = {}
-        
+        @_pingInterval = if @options.pingInterval? then @options.pingInterval else defaultPingInterval
+
         @_connAttempts  = 0
 
         @logger = new Log process.env.MATTERMOST_LOG_LEVEL or 'info'
@@ -100,12 +101,12 @@ class Client extends EventEmitter
 
                 @logger.debug 'ping'
                 @_send {"action": "ping"}
-                if @_lastPong? and Date.now() - @_lastPong > (2*pingInterval)
+                if @_lastPong? and Date.now() - @_lastPong > (2*@_pingInterval)
                     @logger.error "Last pong is too old: %d", (Date.now() - @_lastPong) / 1000
                     @authenticated = false
                     @connected = false
                     @reconnect()
-            , pingInterval
+            , @_pingInterval
 
         @ws.on 'message', (data, flags) =>
             @onMessage JSON.parse(data)
