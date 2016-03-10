@@ -1,6 +1,7 @@
 https       = require 'https'
 querystring = require 'querystring'
 WebSocket   = require 'ws'
+TextEncoder = require 'text-encoding'
 Log            = require 'log'
 {EventEmitter} = require 'events'
 pingInterval = 60000
@@ -218,7 +219,7 @@ class Client extends EventEmitter
             path: '/api/v1' + path
             headers:
                 'Content-Type': 'application/json'
-                'Content-Length': post_data.length
+                'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER '+@token if @token
 
         req = https.request(options)
