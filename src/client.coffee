@@ -4,7 +4,7 @@ WebSocket   = require 'ws'
 TextEncoder = require 'text-encoding'
 Log            = require 'log'
 {EventEmitter} = require 'events'
-pingInterval = 60000
+defaultPingInterval = 60000
 
 User = require './user.coffee'
 Message = require './message.coffee'
