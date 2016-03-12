@@ -43,7 +43,7 @@ class Client extends EventEmitter
                 # Continue happy flow here
                 @token = headers.token
                 @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v1/websocket'
-                @logger.debug 'Websocket URL: ' + @socketUrl
+                @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
                 # Load userlist
@@ -98,10 +98,11 @@ class Client extends EventEmitter
             @emit 'connected'
             @_connAttempts = 0
             @_lastPong = Date.now()
+            @logger.info 'Starting pinger...'
             @_pongTimeout = setInterval =>
                 if not @connected then return
 
-                @logger.debug 'ping'
+                @logger.info 'ping'
                 @_send {"action": "ping"}
                 if @_lastPong? and Date.now() - @_lastPong > (2*@_pingInterval)
                     @logger.error "Last pong is too old: %d", (Date.now() - @_lastPong) / 1000
@@ -155,7 +156,7 @@ class Client extends EventEmitter
         m = new Message @, message
         switch message.action
             when 'ping'
-                @logger.debug 'ACK ping'
+                @logger.info 'ACK ping'
                 @_lastPong = Date.now()
                 @emit 'ping'
             when 'posted'
