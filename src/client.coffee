@@ -24,6 +24,9 @@ class Client extends EventEmitter
         @_messageID = 0
         @_pending = {}
         @_pingInterval = if @options.pingInterval? then @options.pingInterval else defaultPingInterval
+        @autoReconnect = if @options.autoReconnect? then @options.autoReconnect else true
+        @_connecting = false
+        @_reconnecting = false
 
         @_connAttempts  = 0
 
@@ -36,7 +39,9 @@ class Client extends EventEmitter
     _onLogin: (data, headers) =>
         if data
             if not data.id
+                @logger.error 'Login call failed'
                 @authenticated = false
+                @_reconnecting = false
                 @reconnect()
             else
                 @authenticated = true
@@ -83,6 +88,9 @@ class Client extends EventEmitter
             @emit 'error', { msg: 'failed to get channel list'}
 
     connect: ->
+        if @_connecting
+            return
+        @_connecting = true
         @logger.info 'Connecting...'
         options =
             headers: {authorization: "BEARER " + @token}
@@ -94,21 +102,26 @@ class Client extends EventEmitter
             @emit 'error', error
 
         @ws.on 'open', =>
+            @_connecting = false
+            @_reconnecting = false
             @connected = true
             @emit 'connected'
             @_connAttempts = 0
             @_lastPong = Date.now()
             @logger.info 'Starting pinger...'
             @_pongTimeout = setInterval =>
-                if not @connected then return
-
-                @logger.info 'ping'
-                @_send {"action": "ping"}
-                if @_lastPong? and Date.now() - @_lastPong > (2*@_pingInterval)
+                if not @connected
+                    @logger.error 'Not connected in pongTimeout'
+                    @reconnect()
+                    return
+                if @_lastPong? and (Date.now() - @_lastPong) > (2*@_pingInterval)
                     @logger.error "Last pong is too old: %d", (Date.now() - @_lastPong) / 1000
                     @authenticated = false
                     @connected = false
                     @reconnect()
+                else
+                    @logger.info 'ping'
+                    @_send {"action": "ping"}
             , @_pingInterval
 
         @ws.on 'message', (data, flags) =>
@@ -118,10 +131,14 @@ class Client extends EventEmitter
             @emit 'close', code, message
             @connected = false
             @socketUrl = null
-
+            if @autoReconnect
+                @reconnect()
         return true
 
     reconnect: ->
+        if @_reconnecting
+            return
+        @_reconnecting = true
         if @_pongTimeout
             clearInterval @_pongTimeout
             @_pongTimeout = null
@@ -238,7 +255,7 @@ class Client extends EventEmitter
                         callback({'id': null, 'error': 'API response: '+res.statusCode}, res.headers)
 
         req.on 'error', (error) =>
-            if callback? then callback({'id': null, 'error': error.errno})
+            if callback? then callback({'id': null, 'error': error.errno}, {})
 
         req.write('' + post_data)
         req.end()
