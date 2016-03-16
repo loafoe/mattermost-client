@@ -203,6 +203,11 @@ class Client extends EventEmitter
     getChannelByID: (id) ->
         @channels[id]
 
+    customMessage: (postData, channelID) ->
+        @_apiCall 'POST', '/channels/' + channelID + '/create', postData, (data, header) =>
+            @logger.debug 'Posted custom message.'
+            return true
+
     postMessage: (msg, channelID) ->
         postData =
             message: msg
