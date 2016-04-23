@@ -9,6 +9,8 @@ defaultPingInterval = 60000
 User = require './user.coffee'
 Message = require './message.coffee'
 
+apiPrefix = '/api/v3'
+
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
         @authenticated = false
@@ -47,7 +49,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v1/websocket'
+                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + '/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
@@ -239,7 +241,7 @@ class Client extends EventEmitter
         options =
             hostname: @host
             method: method
-            path: '/api/v1' + path
+            path: apiPrefix + path
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
