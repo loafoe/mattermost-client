@@ -10,6 +10,8 @@ User = require './user.coffee'
 Message = require './message.coffee'
 
 apiPrefix = '/api/v3'
+usersRoute = '/users'
+teamsRoute = '/teams'
 
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
@@ -21,6 +23,7 @@ class Client extends EventEmitter
         @channels = {}
         @users = {}
         @teams = {}
+        @teamID = null
 
         @ws = null
         @_messageID = 0
@@ -36,7 +39,7 @@ class Client extends EventEmitter
 
     login: ->
         @logger.info 'Logging in...'
-        @_apiCall 'POST', '/users/login', {name: @group, email: @email, password: @password}, @_onLogin
+        @_apiCall 'POST', usersRoute + '/login', {name: @group, email: @email, password: @password}, @_onLogin
 
     _onLogin: (data, headers) =>
         if data
@@ -49,24 +52,30 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + '/websocket'
+                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
-                # Load userlist
-                @_apiCall 'GET', '/users/profiles', null, @_onProfiles
-                @_apiCall 'GET', '/channels/', null, @_onChannels
-                @_apiCall 'GET', '/teams/me', null, @_onTeams
-                @connect()
+                @getInitialLoad()
         else
             @emit 'error', data
             @authenticated = false
             @reconnect()
 
-    _onTeams: (data, headers) =>
+    _onInitialLoad: (data, headers) =>
         if data
-            @teams = data
+            @teams = data.teams
             @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
+            for t in @teams
+                @logger.debug "Testing #{t.name} == #{@group}"
+                if t.name == @group
+                    @logger.debug "Found team! #{t.id}"
+                    @teamID = t.id
+                    break
+            @preferences = data.preferences
+            @config = data.client_cfg
+            @loadUsersList()
+            @connect()
         else
             @logger.error 'Failed to load teams from server.'
             @emit 'error', { msg: 'failed to load teams.' }
@@ -88,6 +97,21 @@ class Client extends EventEmitter
         else
             @logger.error 'Failed to get subscribed channels list from server.'
             @emit 'error', { msg: 'failed to get channel list'}
+
+    channelRoute: (channelId) ->
+        @teamRoute() + '/channels/' + channelId
+
+    teamRoute: ->
+        teamsRoute + '/' + @teamID
+
+    getInitialLoad: ->
+        @_apiCall 'GET', usersRoute + '/initial_load', null, @_onInitialLoad
+
+    loadUsersList: ->
+        # Load userlist
+        @_apiCall 'GET', usersRoute + '/profiles' + '/' + @teamID, null, @_onProfiles
+        @_apiCall 'GET', @channelRoute(''), null, @_onChannels
+
 
     connect: ->
         if @_connecting
@@ -188,7 +212,7 @@ class Client extends EventEmitter
                 @emit message.action, message
             when 'new_user'
                 # Reload all users for now as, /users/profiles/{id} gives us a 403 currently
-                @_apiCall 'GET', '/users/profiles', null, @_onProfiles
+                @_apiCall 'GET', usersRoute + '/profiles', null, @_onProfiles
                 @emit 'new_user', message
             else
                 @logger.debug 'Received unhandled message type: '+message.action
@@ -206,7 +230,7 @@ class Client extends EventEmitter
         @channels[id]
 
     customMessage: (postData, channelID) ->
-        @_apiCall 'POST', '/channels/' + channelID + '/create', postData, (data, header) =>
+        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             return true
 
@@ -218,7 +242,7 @@ class Client extends EventEmitter
             user_id: @self.id
             channel_id: channelID
 
-        @_apiCall 'POST', '/channels/' + channelID + '/create', postData, (data, header) =>
+        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted message.'
             return true
 
@@ -246,7 +270,7 @@ class Client extends EventEmitter
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER '+@token if @token
-
+        @logger.debug "#{method} #{path}"
         req = https.request(options)
 
         req.on 'response', (res) =>
