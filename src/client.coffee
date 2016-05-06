@@ -39,7 +39,7 @@ class Client extends EventEmitter
 
     login: ->
         @logger.info 'Logging in...'
-        @_apiCall 'POST', usersRoute + '/login', {name: @group, email: @email, password: @password}, @_onLogin
+        @_apiCall 'POST', usersRoute + '/login', {login_id: @email, password: @password}, @_onLogin
 
     _onLogin: (data, headers) =>
         if data
