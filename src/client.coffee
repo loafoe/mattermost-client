@@ -180,7 +180,7 @@ class Client extends EventEmitter
         setTimeout =>
             @logger.info 'Attempting reconnect'
             @login()
-        , 5000
+        , timeout
 
 
     disconnect: ->
