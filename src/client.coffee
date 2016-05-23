@@ -88,7 +88,7 @@ class Client extends EventEmitter
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
-    
+
     _onChannels: (data, headers) =>
         if data
             @channels = data.members
@@ -172,9 +172,9 @@ class Client extends EventEmitter
 
         if @ws
             @ws.close()
-        
+
         @_connAttempts++
-        
+
         timeout = @_connAttempts * 1000
         @logger.info "Reconnecting in %dms", timeout
         setTimeout =>
@@ -225,6 +225,20 @@ class Client extends EventEmitter
         for u of @users
             if @users[u].email == email
                 return @users[u]
+
+    getUserDirectMessageChannel: (userID, callback) ->
+        postData =
+            user_id: userID
+        @_apiCall 'POST', '/channels/create_direct', postData, (data, header) =>
+            @logger.debug 'Requested new DM channel for user ' + userID + '.'
+            callback(data)
+
+    getChannelInfo: (channelID, memberLimit, callback) ->
+        @_apiCall 'GET', '/channels/' + channelID + '/extra_info/2', null, (data, header) =>
+            callback(data)
+
+    getAllChannels: ->
+        @channels
 
     getChannelByID: (id) ->
         @channels[id]
