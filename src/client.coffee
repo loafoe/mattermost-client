@@ -234,7 +234,7 @@ class Client extends EventEmitter
             callback(data)
 
     getChannelInfo: (channelID, memberLimit, callback) ->
-        @_apiCall 'GET', '/channels/' + channelID + '/extra_info/2', null, (data, header) =>
+        @_apiCall 'GET', '/channels/' + channelID + '/extra_info/' + memberLimit, null, (data, header) =>
             callback(data)
 
     getAllChannels: ->
