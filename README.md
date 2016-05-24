@@ -13,6 +13,7 @@ The initial implementation thus contains only the minimal set of API calls to su
 - Connects via websocket for real-time interaction
 - Can post messages to joined channels
 - Can be invited to channels / DMs since its just a regular user
+- Initiate DMs to users
 
 ## Mattermost 3.0
 
