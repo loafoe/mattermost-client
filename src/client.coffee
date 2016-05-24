@@ -88,7 +88,7 @@ class Client extends EventEmitter
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
-    
+
     _onChannels: (data, headers) =>
         if data
             @channels = data.members
@@ -172,9 +172,9 @@ class Client extends EventEmitter
 
         if @ws
             @ws.close()
-        
+
         @_connAttempts++
-        
+
         timeout = @_connAttempts * 1000
         @logger.info "Reconnecting in %dms", timeout
         setTimeout =>
@@ -225,6 +225,33 @@ class Client extends EventEmitter
         for u of @users
             if @users[u].email == email
                 return @users[u]
+
+    getUserDirectMessageChannel: (userID, callback) ->
+        postData =
+            user_id: userID
+        @_apiCall 'POST', '/channels/create_direct', postData, (data, headers) =>
+            @logger.debug 'Requested new DM channel for user ' + userID + '.'
+
+            # If there's no error, return the new DM channel ID
+            unless data.error
+                return callback({'id': data.id}, {})
+
+            # Mattermost throws an error if a DM channel already exists
+            # We can look through all the channels and find the one that only
+            # contains us and the target user and has a total of 2 members
+            for channel, details of @getAllChannels()
+                @getChannelInfo channel, 2, (info) =>
+                    return if info.member_count is not 2
+                    for member in info.members
+                        if member.id is userID
+                            callback({'id': info.id}, {})
+
+    getChannelInfo: (channelID, memberLimit, callback) ->
+        @_apiCall 'GET', '/channels/' + channelID + '/extra_info/' + memberLimit, null, (data, header) =>
+            callback(data)
+
+    getAllChannels: ->
+        @channels
 
     getChannelByID: (id) ->
         @channels[id]
