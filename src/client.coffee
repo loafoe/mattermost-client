@@ -109,7 +109,7 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', usersRoute + '/profiles' + '/' + @teamID, null, @_onProfiles
+        @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
         @_apiCall 'GET', @channelRoute(''), null, @_onChannels
 
 
@@ -211,8 +211,7 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.action, message
             when 'new_user'
-                # Reload all users for now as, /users/profiles/{id} gives us a 403 currently
-                @_apiCall 'GET', usersRoute + '/profiles', null, @_onProfiles
+                @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
                 @emit 'new_user', message
             else
                 @logger.debug 'Received unhandled message type: '+message.action
