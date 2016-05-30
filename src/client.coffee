@@ -224,30 +224,21 @@ class Client extends EventEmitter
         for u of @users
             if @users[u].email == email
                 return @users[u]
-
-    getUserDirectMessageChannel: (userID, callback) ->
-        postData =
-            user_id: userID
-        @_apiCall 'POST', '/channels/create_direct', postData, (data, headers) =>
-            @logger.debug 'Requested new DM channel for user ' + userID + '.'
-
-            # If there's no error, return the new DM channel ID
-            unless data.error
-                return callback({'id': data.id}, {})
-
-            # Mattermost throws an error if a DM channel already exists
-            # We can look through all the channels and find the one that only
-            # contains us and the target user and has a total of 2 members
-            for channel, details of @getAllChannels()
-                @getChannelInfo channel, 2, (info) =>
-                    return if info.member_count is not 2
-                    for member in info.members
-                        if member.id is userID
-                            callback({'id': info.id}, {})
-
-    getChannelInfo: (channelID, memberLimit, callback) ->
-        @_apiCall 'GET', '/channels/' + channelID + '/extra_info/' + memberLimit, null, (data, header) =>
-            callback(data)
+    
+    getUserDirectMessageChannel: (userID) ->
+        # check if channel already exists
+        channel = @self.id + "__" + userID
+        channel = @findChannelByName(channel)
+        if !channel
+            # check if channel in other direction exists
+            channel = userID + "__" + @self.id
+            channel = @findChannelByName(channel)
+            if !channel
+                # channel obviously doesn't exist, let's create it
+                channel = @createDirectChannel(userID)
+                if !channel
+                    return null
+        return channel
 
     getAllChannels: ->
         @channels
@@ -259,6 +250,19 @@ class Client extends EventEmitter
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             return true
+
+    createDirectChannel: (userID) ->
+        postData =
+            user_id: userID
+        @_apiCall 'POST', @channelRoute('/create_direct'), postData, (data, headers) =>
+            @logger.debug 'Created Direct Channel.'
+            return data.id
+
+    findChannelByName: (name) ->
+        for c of @channel_details
+            if @channel_details[c].name == name or @channel_details[c].display_name == name
+                return @channel_details[c]
+        return null
 
     postMessage: (msg, channelID) ->
         postData =
