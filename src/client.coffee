@@ -225,7 +225,7 @@ class Client extends EventEmitter
             if @users[u].email == email
                 return @users[u]
     
-    getUserDirectMessageChannel: (userID) ->
+    getUserDirectMessageChannel: (userID, callback) ->
         # check if channel already exists
         channel = @self.id + "__" + userID
         channel = @findChannelByName(channel)
@@ -237,8 +237,8 @@ class Client extends EventEmitter
                 # channel obviously doesn't exist, let's create it
                 channel = @createDirectChannel(userID)
                 if !channel
-                    return null
-        return channel
+                    if callback? then callback(null)
+        if callback? then callback(channel)
 
     getAllChannels: ->
         @channels
@@ -256,7 +256,7 @@ class Client extends EventEmitter
             user_id: userID
         @_apiCall 'POST', @channelRoute('/create_direct'), postData, (data, headers) =>
             @logger.debug 'Created Direct Channel.'
-            return data.id
+            return data
 
     findChannelByName: (name) ->
         for c of @channel_details
