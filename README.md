@@ -21,7 +21,7 @@ The following environment variables may be defined to alter behavior:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| MATTERMOST\_SSL\_NOVERIFY | No | Allow connections when certs can not be verified (ie: self-signed, etc. - MITM risks) |
+| MATTERMOST\_SSL\_NOVERIFY | No | set to 'true' to allow connections when certs can not be verified (ie: self-signed, etc. - MITM risks) |
 | MATTERMOST\_LOG\_LEVEL | No | set log level (default=info) |
 
 ## Mattermost 3.0
