@@ -15,10 +15,19 @@ The initial implementation thus contains only the minimal set of API calls to su
 - Can be invited to channels / DMs since its just a regular user
 - Initiate DMs to users
 
+## Environment variables
+
+The following environment variables may be defined to alter behavior:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| MATTERMOST\_SSL\_NOVERIFY | No | Allow connections when certs can not be verified (ie: self-signed, etc. - MITM risks) |
+| MATTERMOST\_LOG\_LEVEL | No | set log level (default=info) |
+
 ## Mattermost 3.0
 
 This client always tries to track the latest version of Mattermost.
-As verion `3.x` of Mattermost is a major release and introduces backwards incompatible changes make sure you 
+As verion `3.x` of Mattermost is a major release and introduces backwards incompatible changes make sure you
 are using the latest version of this library.
 
 ## Older versions
