@@ -119,6 +119,7 @@ class Client extends EventEmitter
         @_connecting = true
         @logger.info 'Connecting...'
         options =
+            rejectUnauthorized: JSON.parse(process.env.MATTERMOST_SSL_NOVERIFY or 'false')
             headers: {authorization: "BEARER " + @token}
 
         # Set up websocket connection to server
@@ -296,6 +297,7 @@ class Client extends EventEmitter
             hostname: @host
             method: method
             path: apiPrefix + path
+            rejectUnauthorized: JSON.parse(process.env.MATTERMOST_SSL_NOVERIFY or 'false')
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
