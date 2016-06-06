@@ -13,6 +13,8 @@ apiPrefix = '/api/v3'
 usersRoute = '/users'
 teamsRoute = '/teams'
 
+tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
+
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
         @authenticated = false
@@ -119,6 +121,7 @@ class Client extends EventEmitter
         @_connecting = true
         @logger.info 'Connecting...'
         options =
+            rejectUnauthorized: tlsverify
             headers: {authorization: "BEARER " + @token}
 
         # Set up websocket connection to server
@@ -296,6 +299,7 @@ class Client extends EventEmitter
             hostname: @host
             method: method
             path: apiPrefix + path
+            rejectUnauthorized: tlsverify
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
