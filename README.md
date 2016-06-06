@@ -38,7 +38,6 @@ For interaction with Mattermost versions older than `3.0` please use version `1.
 
 - Write tests
 - Implement more API calls
-- Support non HTTPS connections
 
 # License
 
