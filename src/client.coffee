@@ -65,7 +65,7 @@ class Client extends EventEmitter
             @reconnect()
 
     _onInitialLoad: (data, headers) =>
-        if data
+        if data && not data.error
             @teams = data.teams
             @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
@@ -83,7 +83,7 @@ class Client extends EventEmitter
             @emit 'error', { msg: 'failed to load teams.' }
 
     _onProfiles: (data, headers) =>
-        if data
+        if data && not data.error
             @users = data
             @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
             @emit 'profilesLoaded', { profiles: @users }
@@ -92,7 +92,7 @@ class Client extends EventEmitter
             @emit 'error', { msg: 'failed to load profiles'}
 
     _onChannels: (data, headers) =>
-        if data
+        if data && not data.error
             @channels = data.members
             @logger.debug 'Found '+Object.keys(@channels).length+' channels.'
             @channel_details = data.channels
