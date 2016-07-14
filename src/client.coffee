@@ -13,6 +13,8 @@ apiPrefix = '/api/v3'
 usersRoute = '/users'
 teamsRoute = '/teams'
 
+tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
+
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
         @authenticated = false
@@ -63,7 +65,7 @@ class Client extends EventEmitter
             @reconnect()
 
     _onInitialLoad: (data, headers) =>
-        if data
+        if data && not data.error
             @teams = data.teams
             @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
@@ -81,16 +83,16 @@ class Client extends EventEmitter
             @emit 'error', { msg: 'failed to load teams.' }
 
     _onProfiles: (data, headers) =>
-        if data
+        if data && not data.error
             @users = data
             @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
             @emit 'profilesLoaded', { profiles: @users }
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
-    
+
     _onChannels: (data, headers) =>
-        if data
+        if data && not data.error
             @channels = data.members
             @logger.debug 'Found '+Object.keys(@channels).length+' channels.'
             @channel_details = data.channels
@@ -109,7 +111,7 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', usersRoute + '/profiles' + '/' + @teamID, null, @_onProfiles
+        @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
         @_apiCall 'GET', @channelRoute(''), null, @_onChannels
 
 
@@ -119,6 +121,7 @@ class Client extends EventEmitter
         @_connecting = true
         @logger.info 'Connecting...'
         options =
+            rejectUnauthorized: tlsverify
             headers: {authorization: "BEARER " + @token}
 
         # Set up websocket connection to server
@@ -172,15 +175,15 @@ class Client extends EventEmitter
 
         if @ws
             @ws.close()
-        
+
         @_connAttempts++
-        
+
         timeout = @_connAttempts * 1000
         @logger.info "Reconnecting in %dms", timeout
         setTimeout =>
             @logger.info 'Attempting reconnect'
             @login()
-        , 5000
+        , timeout
 
 
     disconnect: ->
@@ -211,8 +214,7 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.action, message
             when 'new_user'
-                # Reload all users for now as, /users/profiles/{id} gives us a 403 currently
-                @_apiCall 'GET', usersRoute + '/profiles', null, @_onProfiles
+                @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
                 @emit 'new_user', message
             else
                 @logger.debug 'Received unhandled message type: '+message.action
@@ -225,6 +227,24 @@ class Client extends EventEmitter
         for u of @users
             if @users[u].email == email
                 return @users[u]
+    
+    getUserDirectMessageChannel: (userID, callback) ->
+        # check if channel already exists
+        channel = @self.id + "__" + userID
+        channel = @findChannelByName(channel)
+        if !channel
+            # check if channel in other direction exists
+            channel = userID + "__" + @self.id
+            channel = @findChannelByName(channel)
+            if !channel
+                # channel obviously doesn't exist, let's create it
+                channel = @createDirectChannel(userID)
+                if !channel
+                    if callback? then callback(null)
+        if callback? then callback(channel)
+
+    getAllChannels: ->
+        @channels
 
     getChannelByID: (id) ->
         @channels[id]
@@ -233,6 +253,19 @@ class Client extends EventEmitter
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             return true
+
+    createDirectChannel: (userID) ->
+        postData =
+            user_id: userID
+        @_apiCall 'POST', @channelRoute('/create_direct'), postData, (data, headers) =>
+            @logger.debug 'Created Direct Channel.'
+            return data
+
+    findChannelByName: (name) ->
+        for c of @channel_details
+            if @channel_details[c].name == name or @channel_details[c].display_name == name
+                return @channel_details[c]
+        return null
 
     postMessage: (msg, channelID) ->
         postData =
@@ -266,6 +299,7 @@ class Client extends EventEmitter
             hostname: @host
             method: method
             path: apiPrefix + path
+            rejectUnauthorized: tlsverify
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
