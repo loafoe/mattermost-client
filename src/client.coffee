@@ -1,4 +1,5 @@
 https       = require 'https'
+request     = require 'request'
 querystring = require 'querystring'
 WebSocket   = require 'ws'
 TextEncoder = require 'text-encoding'
@@ -296,33 +297,24 @@ class Client extends EventEmitter
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
-            hostname: @host
+            uri: @host + apiPrefix + path
             method: method
-            path: apiPrefix + path
+            json: params
             rejectUnauthorized: tlsverify
             headers:
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
-        options.headers['Authorization'] = 'BEARER '+@token if @token
+        options.headers['Authorization'] = 'BEARER ' + @token if @token
         @logger.debug "#{method} #{path}"
-        req = https.request(options)
-
-        req.on 'response', (res) =>
-            buffer = ''
-            res.on 'data', (chunk) ->
-                buffer += chunk
-            res.on 'end', =>
+        request options, (error, res, value) ->
+            if error
+                if callback? then callback({'id': null, 'error': error.errno}, {})
+            else
                 if callback?
                     if res.statusCode is 200
-                        value = JSON.parse(buffer)
                         callback(value, res.headers)
                     else
-                        callback({'id': null, 'error': 'API response: '+res.statusCode}, res.headers)
+                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers)
 
-        req.on 'error', (error) =>
-            if callback? then callback({'id': null, 'error': error.errno}, {})
-
-        req.write('' + post_data)
-        req.end()
 
 module.exports = Client
