@@ -1,4 +1,3 @@
-https       = require 'https'
 request     = require 'request'
 querystring = require 'querystring'
 WebSocket   = require 'ws'
@@ -15,6 +14,7 @@ usersRoute = '/users'
 teamsRoute = '/teams'
 
 tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
+useTls = !(process.env.MATTERMOST_USE_TLS or '').match(/^false|0|no|off$/i)
 
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
@@ -55,7 +55,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = 'wss://' + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
+                @socketUrl = (if useTls then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
@@ -68,6 +68,7 @@ class Client extends EventEmitter
     _onInitialLoad: (data, headers) =>
         if data && not data.error
             @teams = data.teams
+
             @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
                 @logger.debug "Testing #{t.name} == #{@group}"
@@ -228,7 +229,7 @@ class Client extends EventEmitter
         for u of @users
             if @users[u].email == email
                 return @users[u]
-    
+
     getUserDirectMessageChannel: (userID, callback) ->
         # check if channel already exists
         channel = @self.id + "__" + userID
@@ -297,7 +298,7 @@ class Client extends EventEmitter
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
-            uri: @host + apiPrefix + path
+            uri: (if useTls then 'https://' else 'http://') + @host + (if @options.wssPort? then ':'+ @options.wssPort) + apiPrefix + path
             method: method
             json: params
             rejectUnauthorized: tlsverify
@@ -312,6 +313,8 @@ class Client extends EventEmitter
             else
                 if callback?
                     if res.statusCode is 200
+                        if typeof value == 'string'
+                            value = JSON.parse(value)
                         callback(value, res.headers)
                     else
                         callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers)
