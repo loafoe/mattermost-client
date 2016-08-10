@@ -289,6 +289,7 @@ class Client extends EventEmitter
             return false
         else
             message.id = ++@_messageID
+            message.seq = id
             @_pending[message.id] = message
             @ws.send JSON.stringify(message)
             return message
