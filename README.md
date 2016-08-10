@@ -23,6 +23,7 @@ The following environment variables may be defined to alter behavior:
 |----------|----------|-------------|
 | MATTERMOST\_TLS\_VERIFY | No | (default: true) set to 'false' to allow connections when certs can not be verified (ex: self-signed, internal CA, ... - MITM risks) |
 | MATTERMOST\_LOG\_LEVEL | No | (default: info) set log level (also: debug, ...) |
+| MATTERMOST\_USE\_TLS | No | (default: true) set to 'false' to use http/ws instead of https/wss |
 
 ## Mattermost 3.0
 
