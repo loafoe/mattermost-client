@@ -202,25 +202,32 @@ class Client extends EventEmitter
     onMessage: (message) ->
         @emit 'raw_message', message
         m = new Message @, message
-        switch message.action
+        switch message.event
             when 'ping'
+                # Deprecated
                 @logger.info 'ACK ping'
                 @_lastPong = Date.now()
                 @emit 'ping'
             when 'posted'
                 @emit 'message', m
-            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed'
-                # Generic hadler
-                @emit message.action, message
+            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
+                # Generic handler
+                @emit message.event, message
             when 'channel_viewed', 'preference_changed', 'ephemeral_message'
                 # These are personal messages
-                @emit message.action, message
+                @emit message.event, message
             when 'new_user'
                 @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
                 @emit 'new_user', message
             else
-                @logger.debug 'Received unhandled message type: '+message.action
-                @logger.debug message
+                # Check for `pong` response
+                if message.data.text? and message.data.text == "pong"
+                    @logger.info 'ACK ping'
+                    @_lastPong = Date.now()
+                    @emit 'ping', message
+                else
+                    @logger.debug 'Received unhandled message type: '+message.event
+                    @logger.debug message
 
     getUserByID: (id) ->
         @users[id]
