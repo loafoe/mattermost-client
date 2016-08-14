@@ -14,7 +14,7 @@ usersRoute = '/users'
 teamsRoute = '/teams'
 
 tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
-useTls = !(process.env.MATTERMOST_USE_TLS or '').match(/^false|0|no|off$/i)
+useTLS = !(process.env.MATTERMOST_USE_TLS or '').match(/^false|0|no|off$/i)
 
 class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
@@ -55,7 +55,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = (if useTls then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
+                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User @, data
                 @emit 'loggedIn', @self
@@ -306,7 +306,7 @@ class Client extends EventEmitter
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
-            uri: (if useTls then 'https://' else 'http://') + @host + (if @options.wssPort? then ':'+ @options.wssPort) + apiPrefix + path
+            uri: (if useTLS then 'https://' else 'http://') + @host + apiPrefix + path
             method: method
             json: params
             rejectUnauthorized: tlsverify
