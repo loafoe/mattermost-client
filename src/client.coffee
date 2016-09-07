@@ -221,7 +221,7 @@ class Client extends EventEmitter
                 @emit 'new_user', message
             else
                 # Check for `pong` response
-                if message.data.text? and message.data.text == "pong"
+                if message.data?.text and message.data.text == "pong"
                     @logger.info 'ACK ping'
                     @_lastPong = Date.now()
                     @emit 'ping', message
