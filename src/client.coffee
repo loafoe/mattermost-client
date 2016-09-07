@@ -306,7 +306,7 @@ class Client extends EventEmitter
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
-            uri: (if useTLS then 'https://' else 'http://') + @host + apiPrefix + path
+            uri: (if useTLS then 'https://' else 'http://') + @host + (if @options.httpPort? then ':' + @options.httpPort) + apiPrefix + path
             method: method
             json: params
             rejectUnauthorized: tlsverify
