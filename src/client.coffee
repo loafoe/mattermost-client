@@ -288,6 +288,14 @@ class Client extends EventEmitter
             @logger.debug 'Posted message.'
             return true
 
+    setChannelHeader: (channelID, header) ->
+        postData =
+            channel_id: channelID
+            channel_header: header
+
+        @_apiCall 'POST', @teamRoute() + '/channels/update_header', postData, (data, header) =>
+            @logger.debug 'Channel header updated.'
+            return true
 
     # Private functions
     #
