@@ -1,5 +1,5 @@
 class User
-    constructor: (@_client, data = {}) ->
+    constructor: (data = {}) ->
         for k of (data or {})
             @[k] = data[k]
 
