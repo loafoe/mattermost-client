@@ -210,7 +210,7 @@ class Client extends EventEmitter
                 @emit 'ping'
             when 'posted'
                 @emit 'message', m
-            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
+            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change', 'hello'
                 # Generic handler
                 @emit message.event, message
             when 'channel_viewed', 'preference_changed', 'ephemeral_message'
