@@ -57,7 +57,7 @@ class Client extends EventEmitter
                 @token = headers.token
                 @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
-                @self = new User @, data
+                @self = new User data
                 @emit 'loggedIn', @self
                 @getInitialLoad()
         else
@@ -201,7 +201,7 @@ class Client extends EventEmitter
 
     onMessage: (message) ->
         @emit 'raw_message', message
-        m = new Message @, message
+        m = new Message message
         switch message.event
             when 'ping'
                 # Deprecated
