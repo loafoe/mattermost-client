@@ -96,7 +96,6 @@ class Client extends EventEmitter
     _onChannels: (data, headers) =>
         if data && not data.error
             @channels = data.members
-            @logger.debug 'Found '+Object.keys(@channels).length+' channels.'
             @channel_details = data.channels
         else
             @logger.error 'Failed to get subscribed channels list from server.'
@@ -113,7 +112,7 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
+        @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
         @_apiCall 'GET', @channelRoute(''), null, @_onChannels
 
 
@@ -217,7 +216,7 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
+                @_apiCall 'GET', teamRoute() + '/users/0/1000', null, @_onProfiles
                 @emit 'new_user', message
             else
                 # Check for `pong` response
