@@ -216,7 +216,7 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                @_apiCall 'GET', teamRoute() + '/users/0/1000', null, @_onProfiles
+                @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
                 @emit 'new_user', message
             else
                 # Check for `pong` response
