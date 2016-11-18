@@ -95,8 +95,7 @@ class Client extends EventEmitter
 
     _onChannels: (data, headers) =>
         if data && not data.error
-            @channels = data.members
-            @channel_details = data.channels
+            @channels = data
         else
             @logger.error 'Failed to get subscribed channels list from server.'
             @emit 'error', { msg: 'failed to get channel list'}
@@ -270,9 +269,9 @@ class Client extends EventEmitter
             return data
 
     findChannelByName: (name) ->
-        for c of @channel_details
-            if @channel_details[c].name == name or @channel_details[c].display_name == name
-                return @channel_details[c]
+        for c of @channels
+            if @channels[c].name == name or @channels[c].display_name == name
+                return @channels[c]
         return null
 
     postMessage: (msg, channelID) ->
