@@ -208,7 +208,7 @@ class Client extends EventEmitter
                 @emit 'ping'
             when 'posted'
                 @emit 'message', m
-            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
+            when 'hello', 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
                 # Generic handler
                 @emit message.event, message
             when 'channel_viewed', 'preference_changed', 'ephemeral_message'
@@ -224,7 +224,7 @@ class Client extends EventEmitter
                     @_lastPong = Date.now()
                     @emit 'ping', message
                 else
-                    @logger.debug 'Received unhandled message type: '+message.event
+                    @logger.debug 'Received unhandled message:'
                     @logger.debug message
 
     getUserByID: (id) ->
