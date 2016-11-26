@@ -95,9 +95,7 @@ class Client extends EventEmitter
 
     _onChannels: (data, headers) =>
         if data && not data.error
-            @channels = data.members
-            @logger.debug 'Found '+Object.keys(@channels).length+' channels.'
-            @channel_details = data.channels
+            @channels = data
         else
             @logger.error 'Failed to get subscribed channels list from server.'
             @emit 'error', { msg: 'failed to get channel list'}
@@ -113,7 +111,7 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
+        @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
         @_apiCall 'GET', @channelRoute(''), null, @_onChannels
 
 
@@ -210,14 +208,14 @@ class Client extends EventEmitter
                 @emit 'ping'
             when 'posted'
                 @emit 'message', m
-            when 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change', 'hello'
+            when 'hello', 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
                 # Generic handler
                 @emit message.event, message
             when 'channel_viewed', 'preference_changed', 'ephemeral_message'
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                @_apiCall 'GET', usersRoute + '/profiles/' + @teamID, null, @_onProfiles
+                @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
                 @emit 'new_user', message
             else
                 # Check for `pong` response
@@ -226,7 +224,7 @@ class Client extends EventEmitter
                     @_lastPong = Date.now()
                     @emit 'ping', message
                 else
-                    @logger.debug 'Received unhandled message type: '+message.event
+                    @logger.debug 'Received unhandled message:'
                     @logger.debug message
 
     getUserByID: (id) ->
@@ -271,9 +269,9 @@ class Client extends EventEmitter
             return data
 
     findChannelByName: (name) ->
-        for c of @channel_details
-            if @channel_details[c].name == name or @channel_details[c].display_name == name
-                return @channel_details[c]
+        for c of @channels
+            if @channels[c].name == name or @channels[c].display_name == name
+                return @channels[c]
         return null
 
     postMessage: (msg, channelID) ->
