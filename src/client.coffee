@@ -17,7 +17,7 @@ tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i
 useTLS = !(process.env.MATTERMOST_USE_TLS or '').match(/^false|0|no|off$/i)
 
 class Client extends EventEmitter
-    constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
+    constructor: (@host, @group, @email, @password, @options={wssPort: 443, httpPort: 80}) ->
         @authenticated = false
         @connected = false
         @token = null
