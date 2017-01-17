@@ -96,6 +96,7 @@ class Client extends EventEmitter
     _onChannels: (data, headers) =>
         if data && not data.error
             @channels = data
+            @emit 'channelsLoaded', { channels: @channels }
         else
             @logger.error 'Failed to get subscribed channels list from server.'
             @emit 'error', { msg: 'failed to get channel list'}
