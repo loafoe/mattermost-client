@@ -255,7 +255,7 @@ class Client extends EventEmitter
         @channels
 
     getChannelByID: (id) ->
-        @channels[id]
+        (i for i in @channels when i.id is id)[0]
 
     customMessage: (postData, channelID) ->
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
