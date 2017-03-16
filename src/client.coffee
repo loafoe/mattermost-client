@@ -265,7 +265,7 @@ class Client extends EventEmitter
     createDirectChannel: (userID) ->
         postData =
             user_id: userID
-        @_apiCall 'POST', @channelRoute('/create_direct'), postData, (data, headers) =>
+        @_apiCall 'POST', @channelRoute('create_direct'), postData, (data, headers) =>
             @logger.debug 'Created Direct Channel.'
             return data
 
