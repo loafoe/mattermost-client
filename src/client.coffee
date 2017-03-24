@@ -293,9 +293,7 @@ class Client extends EventEmitter
         message_limit = limit - (content_length - message_length)
         chunks = []
         chunks = message_data.match new RegExp("(.|[\r\n]){1,#{message_limit}}","g")
-        console.log "chunks length: #{chunks?.length}"
         postData.message = chunks.shift()
-        console.log "message length: #{postData.message.length}"
 
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted message.'
