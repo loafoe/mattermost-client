@@ -283,8 +283,27 @@ class Client extends EventEmitter
             user_id: @self.id
             channel_id: channelID
 
+        # break apart long messages (over 4096 bytes)
+        limit = 4096
+        post_data = JSON.stringify(postData)
+        message_data = ''
+        message_data = postData.message
+        content_length = new TextEncoder.TextEncoder('utf-8').encode(post_data).length
+        message_length = new TextEncoder.TextEncoder('utf-8').encode(message_data).length
+        message_limit = limit - (content_length - message_length)
+        chunks = []
+        chunks = message_data.match new RegExp("(.|[\r\n]){1,#{message_limit}}","g")
+        console.log "chunks length: #{chunks?.length}"
+        postData.message = chunks.shift()
+        console.log "message length: #{postData.message.length}"
+
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted message.'
+
+            if chunks?.length > 0
+              msg = chunks.join()
+              @postMessage msg, channelID
+
             return true
 
     setChannelHeader: (channelID, header) ->
@@ -312,7 +331,6 @@ class Client extends EventEmitter
     _apiCall: (method, path, params, callback) ->
         post_data = ''
         post_data = JSON.stringify(params) if params?
-        content_length = new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options =
             uri: (if useTLS then 'https://' else 'http://') + @host + (if @options.httpPort? then ':' + @options.httpPort else "") + apiPrefix + path
             method: method
@@ -320,20 +338,9 @@ class Client extends EventEmitter
             rejectUnauthorized: tlsverify
             headers:
                 'Content-Type': 'application/json'
-                'Content-Length': content_length
+                'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER ' + @token if @token
         @logger.debug "#{method} #{path}"
-
-        # break apart long messages
-        limit = 4096
-        message_limit = limit - (content_length - new TextEncoder.TextEncoder('utf-8').encode(params.message).length) if params?.message?
-        chunks = []
-        chunks = params.message.match new RegExp("[^]{1,#{message_limit}}","g") if params?.message?
-        console.log "chunks: #{chunks}"
-        if chunks.length > 1
-          params.message = chunks.shift()
-          @_apiCall method, path, params, callback
-
         request options, (error, res, value) ->
             if error
                 if callback? then callback({'id': null, 'error': error.errno}, {})
