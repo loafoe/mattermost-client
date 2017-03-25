@@ -283,8 +283,25 @@ class Client extends EventEmitter
             user_id: @self.id
             channel_id: channelID
 
+        # break apart long messages (over 4096 bytes)
+        limit = 4096
+        post_data = JSON.stringify(postData)
+        message_data = ''
+        message_data = postData.message
+        content_length = new TextEncoder.TextEncoder('utf-8').encode(post_data).length
+        message_length = new TextEncoder.TextEncoder('utf-8').encode(message_data).length
+        message_limit = limit - (content_length - message_length)
+        chunks = []
+        chunks = message_data.match new RegExp("(.|[\r\n]){1,#{message_limit}}","g")
+        postData.message = chunks.shift()
+
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted message.'
+
+            if chunks?.length > 0
+              msg = chunks.join()
+              @postMessage msg, channelID
+
             return true
 
     setChannelHeader: (channelID, header) ->
