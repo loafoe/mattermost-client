@@ -12,6 +12,7 @@ Message = require './message.coffee'
 apiPrefix = '/api/v3'
 usersRoute = '/users'
 teamsRoute = '/teams'
+messageMaxRunes = 4000
 
 tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
 useTLS = !(process.env.MATTERMOST_USE_TLS or '').match(/^false|0|no|off$/i)
@@ -258,8 +259,15 @@ class Client extends EventEmitter
         (i for i in @channels when i.id is id)[0]
 
     customMessage: (postData, channelID) ->
+        chunks = @_chunkMessage(postData.message)
+        postData.message = chunks.shift()
+
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
+            if chunks?.length > 0
+              @logger.debug "Recursively posting remainder of customMessage: (#{chunks.length})"
+              postData.message = chunks.join() # TODO: need to check other content of customMessage
+              return @customMessage(postData, channelID)
             return true
 
     createDirectChannel: (userID) ->
@@ -275,6 +283,13 @@ class Client extends EventEmitter
                 return @channels[c]
         return null
 
+    _chunkMessage: (msg) ->
+        message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length
+        message_limit = messageMaxRunes
+        chunks = []
+        chunks = msg.match new RegExp("(.|[\r\n]){1,#{message_limit}}","g")
+        return chunks
+
     postMessage: (msg, channelID) ->
         postData =
             message: msg
@@ -283,16 +298,8 @@ class Client extends EventEmitter
             user_id: @self.id
             channel_id: channelID
 
-        # break apart long messages (over 4096 bytes)
-        limit = 4096
-        post_data = JSON.stringify(postData)
-        message_data = ''
-        message_data = postData.message
-        content_length = new TextEncoder.TextEncoder('utf-8').encode(post_data).length
-        message_length = new TextEncoder.TextEncoder('utf-8').encode(message_data).length
-        message_limit = limit - (content_length - message_length)
-        chunks = []
-        chunks = message_data.match new RegExp("(.|[\r\n]){1,#{message_limit}}","g")
+        # break apart long messages
+        chunks = @_chunkMessage(postData.message)
         postData.message = chunks.shift()
 
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
@@ -300,7 +307,8 @@ class Client extends EventEmitter
 
             if chunks?.length > 0
               msg = chunks.join()
-              @postMessage msg, channelID
+              @logger.debug "Recursively posting remainder of message: (#{chunks?.length})"
+              return @postMessage msg, channelID
 
             return true
 
