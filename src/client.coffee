@@ -259,14 +259,15 @@ class Client extends EventEmitter
         (i for i in @channels when i.id is id)[0]
 
     customMessage: (postData, channelID) ->
-        chunks = @_chunkMessage(postData.message)
-        postData.message = chunks.shift()
+        if postData.message?
+            chunks = @_chunkMessage(postData.message)
+            postData.message = chunks.shift()
 
         @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             if chunks?.length > 0
               @logger.debug "Recursively posting remainder of customMessage: (#{chunks.length})"
-              postData.message = chunks.join() # TODO: need to check other content of customMessage
+              postData.message = chunks.join()
               return @customMessage(postData, channelID)
             return true
 
