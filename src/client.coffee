@@ -20,7 +20,7 @@ class Client extends EventEmitter
     constructor: (@host, @group, @email, @password, @options={wssPort: 443}) ->
         @authenticated = false
         @connected = false
-        @token = null
+        @token = if @options.token? then @options.token else null
 
         @self = null
         @channels = {}
