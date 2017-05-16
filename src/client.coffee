@@ -73,7 +73,7 @@ class Client extends EventEmitter
             @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
                 @logger.debug "Testing #{t.name} == #{@group}"
-                if t.name == @group
+                if t.name.toLowerCase() == @group.toLowerCase()
                     @logger.debug "Found team! #{t.id}"
                     @teamID = t.id
                     break
