@@ -70,7 +70,7 @@ class Client extends EventEmitter
     _onProfiles: (data, headers) =>
         if data && not data.error
             @users = data
-            @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
+            @logger.info 'Found '+Object.keys(@users).length+' profiles.'
             @emit 'profilesLoaded', { profiles: @users }
         else
             @logger.error 'Failed to load profiles from server.'
@@ -79,32 +79,38 @@ class Client extends EventEmitter
     _onChannels: (data, headers) =>
         if data && not data.error
             @channels = data
+            @logger.info 'Found '+Object.keys(@channels).length+' subscribed channels.'
             @emit 'channelsLoaded', { channels: @channels }
         else
-            @logger.error 'Failed to get subscribed channels list from server.'
+            @logger.error 'Failed to get subscribed channels list from server: ' + data.error
             @emit 'error', { msg: 'failed to get channel list'}
 
     _onPreferences: (data, headers) =>
         if data && not data.error
             @preferences = data
             @emit 'preferencesLoaded', { preferences: @preferences }
-            @logger.debug 'Loaded Preferences...'
+            @logger.info 'Loaded Preferences...'
+        else
+            @logger.error 'Failed to load Preferences...' + data.error
+
 
     _onMe: (data, headers) =>
         if data && not data.error
             @me = data
             @emit 'meLoaded', { me: @me }
-            @logger.debug 'Loaded Me...'
+            @logger.info 'Loaded Me...'
+        else
+            @logger.error 'Failed to load Me...' + data.error
 
     _onTeams: (data, headers) =>
         if data && not data.error
             @teams = data
             @emit 'teamsLoaded', { teams: @teams }
-            @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
+            @logger.info 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
                 @logger.debug "Testing #{t.name} == #{@group}"
                 if t.name.toLowerCase() == @group.toLowerCase()
-                    @logger.debug "Found team! #{t.id}"
+                    @logger.info "Found team! #{t.id}"
                     @teamID = t.id
                     break
             @loadUsersList() # FIXME
@@ -117,21 +123,24 @@ class Client extends EventEmitter
         usersRoute + '/me/teams/' + @teamID
 
     getMe: ->
-        @_apiCall 'GET', usersRoute + '/me', null, @_onMe
+        uri = usersRoute + '/me'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onMe
 
     getPreferences: ->
-        @_apiCall 'GET', usersRoute + '/me/preferences', null, @_onPreferences
+        uri = usersRoute + '/me/preferences'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onPreferences
 
     getTeams: ->
-        @_apiCall 'GET', usersRoute + '/me/teams', null, @_onTeams
-
-    getInitialLoad: ->
-        @_apiCall 'GET', usersRoute + '/initial_load', null, @_onInitialLoad
+        uri = usersRoute + '/me/teams'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onTeams
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', @teamRoute() + '/members', null, @_onProfiles
-        @_apiCall 'GET', @channelRoute(''), null, @_onChannels
+        @_apiCall 'GET', '/teams/' + @teamID + '/members?per_page=1000', null, @_onProfiles
+        @_apiCall 'GET', @teamRoute() + '/channels', null, @_onChannels
 
 
     connect: ->
@@ -320,7 +329,7 @@ class Client extends EventEmitter
         chunks = @_chunkMessage(postData.message)
         postData.message = chunks.shift()
 
-        @_apiCall 'POST', '/posts/create', postData, (data, header) =>
+        @_apiCall 'POST', '/posts', postData, (data, header) =>
             @logger.debug 'Posted message.'
 
             if chunks?.length > 0
