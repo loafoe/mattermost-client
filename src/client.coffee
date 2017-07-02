@@ -11,7 +11,6 @@ Message = require './message.coffee'
 
 apiPrefix = '/api/v4'
 usersRoute = '/users'
-teamsRoute = '/teams'
 messageMaxRunes = 4000
 
 tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
@@ -89,11 +88,13 @@ class Client extends EventEmitter
         if data && not data.error
             @preferences = data
             @emit 'preferencesLoaded', { preferences: @preferences }
+            @logger.debug 'Loaded Preferences...'
 
     _onMe: (data, headers) =>
         if data && not data.error
             @me = data
             @emit 'meLoaded', { me: @me }
+            @logger.debug 'Loaded Me...'
 
     _onTeams: (data, headers) =>
         if data && not data.error
@@ -113,7 +114,7 @@ class Client extends EventEmitter
         @teamRoute() + '/channels/' + channelId
 
     teamRoute: ->
-        teamsRoute + '/' + @teamID
+        usersRoute + '/me/teams/' + @teamID
 
     getMe: ->
         @_apiCall 'GET', usersRoute + '/me', null, @_onMe
@@ -129,7 +130,7 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
+        @_apiCall 'GET', @teamRoute() + '/members', null, @_onProfiles
         @_apiCall 'GET', @channelRoute(''), null, @_onChannels
 
 
