@@ -72,7 +72,7 @@ class Client extends EventEmitter
             for user in data
               @users[user.id] = user
             @logger.info 'Found '+Object.keys(data).length+' profiles.'
-            @emit 'profilesLoaded', { profiles: data }
+            @emit 'profilesLoaded', data
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
@@ -82,7 +82,7 @@ class Client extends EventEmitter
             for channel in data
               @channels[channel.id] = channel
             @logger.info 'Found '+Object.keys(data).length+' subscribed channels.'
-            @emit 'channelsLoaded', { channels: data }
+            @emit 'channelsLoaded', data
         else
             @logger.error 'Failed to get subscribed channels list from server: ' + data.error
             @emit 'error', { msg: 'failed to get channel list'}
@@ -90,7 +90,7 @@ class Client extends EventEmitter
     _onPreferences: (data, headers) =>
         if data && not data.error
             @preferences = data
-            @emit 'preferencesLoaded', { preferences: @preferences }
+            @emit 'preferencesLoaded', data
             @logger.info 'Loaded Preferences...'
         else
             @logger.error 'Failed to load Preferences...' + data.error
@@ -99,7 +99,7 @@ class Client extends EventEmitter
     _onMe: (data, headers) =>
         if data && not data.error
             @me = data
-            @emit 'meLoaded', { me: @me }
+            @emit 'meLoaded', data
             @logger.info 'Loaded Me...'
         else
             @logger.error 'Failed to load Me...' + data.error
@@ -107,7 +107,7 @@ class Client extends EventEmitter
     _onTeams: (data, headers) =>
         if data && not data.error
             @teams = data
-            @emit 'teamsLoaded', { teams: @teams }
+            @emit 'teamsLoaded', data
             @logger.info 'Found '+Object.keys(@teams).length+' teams.'
             for t in @teams
                 @logger.debug "Testing #{t.name} == #{@group}"
@@ -246,7 +246,7 @@ class Client extends EventEmitter
                 # Deprecated
                 @logger.info 'ACK ping'
                 @_lastPong = Date.now()
-                @emit 'ping'
+                @emit 'ping', message
             when 'posted'
                 @emit 'message', m
             when 'hello', 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
