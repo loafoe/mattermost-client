@@ -256,12 +256,12 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
+                # TODO: fetch enough detail for new user
                 @emit 'new_user', message
             else
                 # Check for `pong` response
                 if message.data?.text? and message.data.text == "pong"
-                    @logger.info 'ACK ping'
+                    @logger.info 'ACK ping (2)'
                     @_lastPong = Date.now()
                     @emit 'ping', message
                 else
