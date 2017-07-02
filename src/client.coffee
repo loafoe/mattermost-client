@@ -55,7 +55,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v3/users/websocket'
+                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v4/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User data
                 @emit 'loggedIn', @self
@@ -150,7 +150,6 @@ class Client extends EventEmitter
         @logger.info 'Connecting...'
         options =
             rejectUnauthorized: tlsverify
-            headers: {authorization: "BEARER " + @token}
 
         # Set up websocket connection to server
         @ws = new WebSocket @socketUrl, options
@@ -165,6 +164,14 @@ class Client extends EventEmitter
             @emit 'connected'
             @_connAttempts = 0
             @_lastPong = Date.now()
+            challenge = {
+              "action": "authentication_challenge",
+              "data": {
+                "token": @token
+              }
+            }
+            @logger.info 'Sending challenge...'
+            @_send challenge
             @logger.info 'Starting pinger...'
             @_pongTimeout = setInterval =>
                 if not @connected
