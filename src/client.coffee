@@ -9,7 +9,7 @@ defaultPingInterval = 60000
 User = require './user.coffee'
 Message = require './message.coffee'
 
-apiPrefix = '/api/v3'
+apiPrefix = '/api/v4'
 usersRoute = '/users'
 teamsRoute = '/teams'
 messageMaxRunes = 4000
@@ -262,8 +262,8 @@ class Client extends EventEmitter
         if postData.message?
             chunks = @_chunkMessage(postData.message)
             postData.message = chunks.shift()
-
-        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
+        postData.channel_id = channelID
+        @_apiCall 'POST', '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             if chunks?.length > 0
               @logger.debug "Recursively posting remainder of customMessage: (#{chunks.length})"
@@ -303,7 +303,7 @@ class Client extends EventEmitter
         chunks = @_chunkMessage(postData.message)
         postData.message = chunks.shift()
 
-        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
+        @_apiCall 'POST', '/posts/create', postData, (data, header) =>
             @logger.debug 'Posted message.'
 
             if chunks?.length > 0
