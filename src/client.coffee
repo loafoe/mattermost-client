@@ -60,30 +60,13 @@ class Client extends EventEmitter
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User data
                 @emit 'loggedIn', @self
-                @getInitialLoad()
+                @getMe()
+                @getPreferences()
+                @getTeams()
         else
             @emit 'error', data
             @authenticated = false
             @reconnect()
-
-    _onInitialLoad: (data, headers) =>
-        if data && not data.error
-            @teams = data.teams
-
-            @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
-            for t in @teams
-                @logger.debug "Testing #{t.name} == #{@group}"
-                if t.name.toLowerCase() == @group.toLowerCase()
-                    @logger.debug "Found team! #{t.id}"
-                    @teamID = t.id
-                    break
-            @preferences = data.preferences
-            @config = data.client_cfg
-            @loadUsersList()
-            @connect()
-        else
-            @logger.error 'Failed to load teams from server.'
-            @emit 'error', { msg: 'failed to load teams.' }
 
     _onProfiles: (data, headers) =>
         if data && not data.error
@@ -102,11 +85,44 @@ class Client extends EventEmitter
             @logger.error 'Failed to get subscribed channels list from server.'
             @emit 'error', { msg: 'failed to get channel list'}
 
+    _onPreferences: (data, headers) =>
+        if data && not data.error
+            @preferences = data
+            @emit 'preferencesLoaded', { preferences: @preferences }
+
+    _onMe: (data, headers) =>
+        if data && not data.error
+            @me = data
+            @emit 'meLoaded', { me: @me }
+
+    _onTeams: (data, headers) =>
+        if data && not data.error
+            @teams = data
+            @emit 'teamsLoaded', { teams: @teams }
+            @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
+            for t in @teams
+                @logger.debug "Testing #{t.name} == #{@group}"
+                if t.name.toLowerCase() == @group.toLowerCase()
+                    @logger.debug "Found team! #{t.id}"
+                    @teamID = t.id
+                    break
+            @loadUsersList() # FIXME
+            @connect() # FIXME
+
     channelRoute: (channelId) ->
         @teamRoute() + '/channels/' + channelId
 
     teamRoute: ->
         teamsRoute + '/' + @teamID
+
+    getMe: ->
+        @_apiCall 'GET', usersRoute + '/me', null, @_onMe
+
+    getPreferences: ->
+        @_apiCall 'GET', usersRoute + '/me/preferences', null, @_onPreferences
+
+    getTeams: ->
+        @_apiCall 'GET', usersRoute + '/me/teams', null, @_onTeams
 
     getInitialLoad: ->
         @_apiCall 'GET', usersRoute + '/initial_load', null, @_onInitialLoad
