@@ -69,18 +69,20 @@ class Client extends EventEmitter
 
     _onProfiles: (data, headers) =>
         if data && not data.error
-            @users = data
-            @logger.info 'Found '+Object.keys(@users).length+' profiles.'
-            @emit 'profilesLoaded', { profiles: @users }
+            for user in data
+              @users[user.id] = user
+            @logger.info 'Found '+Object.keys(data).length+' profiles.'
+            @emit 'profilesLoaded', { profiles: data }
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
 
     _onChannels: (data, headers) =>
         if data && not data.error
-            @channels = data
-            @logger.info 'Found '+Object.keys(@channels).length+' subscribed channels.'
-            @emit 'channelsLoaded', { channels: @channels }
+            for channel in data
+              @channels[channel.id] = channel
+            @logger.info 'Found '+Object.keys(data).length+' subscribed channels.'
+            @emit 'channelsLoaded', { channels: data }
         else
             @logger.error 'Failed to get subscribed channels list from server: ' + data.error
             @emit 'error', { msg: 'failed to get channel list'}
@@ -139,8 +141,12 @@ class Client extends EventEmitter
 
     loadUsersList: ->
         # Load userlist
-        @_apiCall 'GET', '/teams/' + @teamID + '/members?per_page=1000', null, @_onProfiles
-        @_apiCall 'GET', @teamRoute() + '/channels', null, @_onChannels
+        uri =  "/users?per_page=200&in_team=#{@teamID}"
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onProfiles
+        @logger.info 'Loading ' + uri
+        uri = "/users/me/teams/#{@teamID}/channels"
+        @_apiCall 'GET', uri, null, @_onChannels
 
 
     connect: ->
