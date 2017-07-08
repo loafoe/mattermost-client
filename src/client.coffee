@@ -67,17 +67,19 @@ class Client extends EventEmitter
             @authenticated = false
             @reconnect()
 
-    _onProfiles: (data, headers) =>
+    _onLoadUsers: (data, headers, params) =>
         if data && not data.error
             for user in data
               @users[user.id] = user
             @logger.info 'Found '+Object.keys(data).length+' profiles.'
             @emit 'profilesLoaded', data
+            if Object.keys(data).length > 0 && params.page?
+              @loadUsers(params.page+1) # Trigger next page loading
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
 
-    _onChannels: (data, headers) =>
+    _onChannels: (data, headers, params) =>
         if data && not data.error
             for channel in data
               @channels[channel.id] = channel
@@ -87,7 +89,7 @@ class Client extends EventEmitter
             @logger.error 'Failed to get subscribed channels list from server: ' + data.error
             @emit 'error', { msg: 'failed to get channel list'}
 
-    _onPreferences: (data, headers) =>
+    _onPreferences: (data, headers, params) =>
         if data && not data.error
             @preferences = data
             @emit 'preferencesLoaded', data
@@ -96,7 +98,7 @@ class Client extends EventEmitter
             @logger.error 'Failed to load Preferences...' + data.error
 
 
-    _onMe: (data, headers) =>
+    _onMe: (data, headers, params) =>
         if data && not data.error
             @me = data
             @emit 'meLoaded', data
@@ -104,7 +106,7 @@ class Client extends EventEmitter
         else
             @logger.error 'Failed to load Me...' + data.error
 
-    _onTeams: (data, headers) =>
+    _onTeams: (data, headers, params) =>
         if data && not data.error
             @teams = data
             @emit 'teamsLoaded', data
@@ -115,7 +117,8 @@ class Client extends EventEmitter
                     @logger.info "Found team! #{t.id}"
                     @teamID = t.id
                     break
-            @loadUsersList() # FIXME
+            @loadUsers()
+            @loadChannels()
             @connect() # FIXME
 
     channelRoute: (channelId) ->
@@ -139,13 +142,14 @@ class Client extends EventEmitter
         @logger.info 'Loading ' + uri
         @_apiCall 'GET', uri, null, @_onTeams
 
-    loadUsersList: ->
-        # Load userlist
-        uri =  "/users?per_page=200&in_team=#{@teamID}"
+    loadUsers: (page = 0) ->
+        uri =  "/users?page=#{page}&per_page=200&in_team=#{@teamID}"
         @logger.info 'Loading ' + uri
-        @_apiCall 'GET', uri, null, @_onProfiles
-        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onLoadUsers, { page: page }
+
+    loadChannels: (page = 0) ->
         uri = "/users/me/teams/#{@teamID}/channels"
+        @logger.info 'Loading ' + uri
         @_apiCall 'GET', uri, null, @_onChannels
 
 
@@ -374,7 +378,7 @@ class Client extends EventEmitter
             return message
 
 
-    _apiCall: (method, path, params, callback) ->
+    _apiCall: (method, path, params, callback, callback_params = {}) ->
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
@@ -389,15 +393,15 @@ class Client extends EventEmitter
         @logger.debug "#{method} #{path}"
         request options, (error, res, value) ->
             if error
-                if callback? then callback({'id': null, 'error': error.errno}, {})
+                if callback? then callback({'id': null, 'error': error.errno}, {}, callback_params)
             else
                 if callback?
                     if res.statusCode is 200
                         if typeof value == 'string'
                             value = JSON.parse(value)
-                        callback(value, res.headers)
+                        callback(value, res.headers, callback_params)
                     else
-                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers)
+                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers, callback_params)
 
 
 module.exports = Client
