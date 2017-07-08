@@ -79,6 +79,11 @@ class Client extends EventEmitter
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
 
+    _onLoadUser: (data, headers, params) =>
+        if data && not data.error
+          @users[data.id] = user
+          @emit 'profilesLoaded', [data]
+
     _onChannels: (data, headers, params) =>
         if data && not data.error
             for channel in data
@@ -146,6 +151,11 @@ class Client extends EventEmitter
         uri =  "/users?page=#{page}&per_page=200&in_team=#{@teamID}"
         @logger.info 'Loading ' + uri
         @_apiCall 'GET', uri, null, @_onLoadUsers, { page: page }
+
+    loadUser: (user_id) ->
+        uri = "/users/#{user_id}"
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onLoadUser, {}
 
     loadChannels: (page = 0) ->
         uri = "/users/me/teams/#{@teamID}/channels"
@@ -260,7 +270,7 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                # TODO: fetch enough detail for new user
+                @loadUser(message.data.user_id)
                 @emit 'new_user', message
             else
                 # Check for `pong` response
