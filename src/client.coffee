@@ -9,9 +9,8 @@ defaultPingInterval = 60000
 User = require './user.coffee'
 Message = require './message.coffee'
 
-apiPrefix = '/api/v3'
+apiPrefix = '/api/v4'
 usersRoute = '/users'
-teamsRoute = '/teams'
 messageMaxRunes = 4000
 
 tlsverify = !(process.env.MATTERMOST_TLS_VERIFY or '').match(/^false|0|no|off$/i)
@@ -56,65 +55,112 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + apiPrefix + usersRoute + '/websocket'
+                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v4/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User data
                 @emit 'loggedIn', @self
-                @getInitialLoad()
+                @getMe()
+                @getPreferences()
+                @getTeams()
         else
             @emit 'error', data
             @authenticated = false
             @reconnect()
 
-    _onInitialLoad: (data, headers) =>
+    _onLoadUsers: (data, headers, params) =>
         if data && not data.error
-            @teams = data.teams
-
-            @logger.debug 'Found '+Object.keys(@teams).length+' teams.'
-            for t in @teams
-                @logger.debug "Testing #{t.name} == #{@group}"
-                if t.name.toLowerCase() == @group.toLowerCase()
-                    @logger.debug "Found team! #{t.id}"
-                    @teamID = t.id
-                    break
-            @preferences = data.preferences
-            @config = data.client_cfg
-            @loadUsersList()
-            @connect()
-        else
-            @logger.error 'Failed to load teams from server.'
-            @emit 'error', { msg: 'failed to load teams.' }
-
-    _onProfiles: (data, headers) =>
-        if data && not data.error
-            @users = data
-            @logger.debug 'Found '+Object.keys(@users).length+' profiles.'
-            @emit 'profilesLoaded', { profiles: @users }
+            for user in data
+              @users[user.id] = user
+            @logger.info 'Found '+Object.keys(data).length+' profiles.'
+            @emit 'profilesLoaded', data
+            if Object.keys(data).length > 0 && params.page?
+              @loadUsers(params.page+1) # Trigger next page loading
         else
             @logger.error 'Failed to load profiles from server.'
             @emit 'error', { msg: 'failed to load profiles'}
 
-    _onChannels: (data, headers) =>
+    _onLoadUser: (data, headers, params) =>
         if data && not data.error
-            @channels = data
-            @emit 'channelsLoaded', { channels: @channels }
+          @users[data.id] = user
+          @emit 'profilesLoaded', [data]
+
+    _onChannels: (data, headers, params) =>
+        if data && not data.error
+            for channel in data
+              @channels[channel.id] = channel
+            @logger.info 'Found '+Object.keys(data).length+' subscribed channels.'
+            @emit 'channelsLoaded', data
         else
-            @logger.error 'Failed to get subscribed channels list from server.'
+            @logger.error 'Failed to get subscribed channels list from server: ' + data.error
             @emit 'error', { msg: 'failed to get channel list'}
+
+    _onPreferences: (data, headers, params) =>
+        if data && not data.error
+            @preferences = data
+            @emit 'preferencesLoaded', data
+            @logger.info 'Loaded Preferences...'
+        else
+            @logger.error 'Failed to load Preferences...' + data.error
+
+
+    _onMe: (data, headers, params) =>
+        if data && not data.error
+            @me = data
+            @emit 'meLoaded', data
+            @logger.info 'Loaded Me...'
+        else
+            @logger.error 'Failed to load Me...' + data.error
+
+    _onTeams: (data, headers, params) =>
+        if data && not data.error
+            @teams = data
+            @emit 'teamsLoaded', data
+            @logger.info 'Found '+Object.keys(@teams).length+' teams.'
+            for t in @teams
+                @logger.debug "Testing #{t.name} == #{@group}"
+                if t.name.toLowerCase() == @group.toLowerCase()
+                    @logger.info "Found team! #{t.id}"
+                    @teamID = t.id
+                    break
+            @loadUsers()
+            @loadChannels()
+            @connect() # FIXME
 
     channelRoute: (channelId) ->
         @teamRoute() + '/channels/' + channelId
 
     teamRoute: ->
-        teamsRoute + '/' + @teamID
+        usersRoute + '/me/teams/' + @teamID
 
-    getInitialLoad: ->
-        @_apiCall 'GET', usersRoute + '/initial_load', null, @_onInitialLoad
+    getMe: ->
+        uri = usersRoute + '/me'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onMe
 
-    loadUsersList: ->
-        # Load userlist
-        @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
-        @_apiCall 'GET', @channelRoute(''), null, @_onChannels
+    getPreferences: ->
+        uri = usersRoute + '/me/preferences'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onPreferences
+
+    getTeams: ->
+        uri = usersRoute + '/me/teams'
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onTeams
+
+    loadUsers: (page = 0) ->
+        uri =  "/users?page=#{page}&per_page=200&in_team=#{@teamID}"
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onLoadUsers, { page: page }
+
+    loadUser: (user_id) ->
+        uri = "/users/#{user_id}"
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onLoadUser, {}
+
+    loadChannels: (page = 0) ->
+        uri = "/users/me/teams/#{@teamID}/channels"
+        @logger.info 'Loading ' + uri
+        @_apiCall 'GET', uri, null, @_onChannels
 
 
     connect: ->
@@ -124,7 +170,6 @@ class Client extends EventEmitter
         @logger.info 'Connecting...'
         options =
             rejectUnauthorized: tlsverify
-            headers: {authorization: "BEARER " + @token}
 
         # Set up websocket connection to server
         @ws = new WebSocket @socketUrl, options
@@ -139,6 +184,14 @@ class Client extends EventEmitter
             @emit 'connected'
             @_connAttempts = 0
             @_lastPong = Date.now()
+            challenge = {
+              "action": "authentication_challenge",
+              "data": {
+                "token": @token
+              }
+            }
+            @logger.info 'Sending challenge...'
+            @_send challenge
             @logger.info 'Starting pinger...'
             @_pongTimeout = setInterval =>
                 if not @connected
@@ -207,7 +260,7 @@ class Client extends EventEmitter
                 # Deprecated
                 @logger.info 'ACK ping'
                 @_lastPong = Date.now()
-                @emit 'ping'
+                @emit 'ping', message
             when 'posted'
                 @emit 'message', m
             when 'hello', 'typing', 'post_edit', 'post_deleted', 'user_added', 'user_removed', 'status_change'
@@ -217,12 +270,12 @@ class Client extends EventEmitter
                 # These are personal messages
                 @emit message.event, message
             when 'new_user'
-                @_apiCall 'GET', @teamRoute() + '/users/0/1000', null, @_onProfiles
+                @loadUser(message.data.user_id)
                 @emit 'new_user', message
             else
                 # Check for `pong` response
                 if message.data?.text? and message.data.text == "pong"
-                    @logger.info 'ACK ping'
+                    @logger.info 'ACK ping (2)'
                     @_lastPong = Date.now()
                     @emit 'ping', message
                 else
@@ -262,8 +315,8 @@ class Client extends EventEmitter
         if postData.message?
             chunks = @_chunkMessage(postData.message)
             postData.message = chunks.shift()
-
-        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
+        postData.channel_id = channelID
+        @_apiCall 'POST', '/posts', postData, (data, header) =>
             @logger.debug 'Posted custom message.'
             if chunks?.length > 0
               @logger.debug "Recursively posting remainder of customMessage: (#{chunks.length})"
@@ -303,7 +356,7 @@ class Client extends EventEmitter
         chunks = @_chunkMessage(postData.message)
         postData.message = chunks.shift()
 
-        @_apiCall 'POST', @channelRoute(channelID) + '/posts/create', postData, (data, header) =>
+        @_apiCall 'POST', '/posts', postData, (data, header) =>
             @logger.debug 'Posted message.'
 
             if chunks?.length > 0
@@ -335,7 +388,7 @@ class Client extends EventEmitter
             return message
 
 
-    _apiCall: (method, path, params, callback) ->
+    _apiCall: (method, path, params, callback, callback_params = {}) ->
         post_data = ''
         post_data = JSON.stringify(params) if params?
         options =
@@ -350,15 +403,15 @@ class Client extends EventEmitter
         @logger.debug "#{method} #{path}"
         request options, (error, res, value) ->
             if error
-                if callback? then callback({'id': null, 'error': error.errno}, {})
+                if callback? then callback({'id': null, 'error': error.errno}, {}, callback_params)
             else
                 if callback?
                     if res.statusCode is 200
                         if typeof value == 'string'
                             value = JSON.parse(value)
-                        callback(value, res.headers)
+                        callback(value, res.headers, callback_params)
                     else
-                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers)
+                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers, callback_params)
 
 
 module.exports = Client
