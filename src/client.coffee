@@ -298,12 +298,11 @@ class Client extends EventEmitter
             # check if channel in other direction exists
             channel = userID + "__" + @self.id
             channel = @findChannelByName(channel)
-            if !channel
-                # channel obviously doesn't exist, let's create it
-                channel = @createDirectChannel(userID)
-                if !channel
-                    if callback? then callback(null)
-        if callback? then callback(channel)
+        if channel
+            # channel obviously doesn't exist, let's create it
+            if callback? then callback(channel)
+            return
+        @createDirectChannel(userID,callback)
 
     getAllChannels: ->
         @channels
@@ -337,6 +336,8 @@ class Client extends EventEmitter
         return null
 
     _chunkMessage: (msg) ->
+        if not msg  
+            return ['']
         message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length
         message_limit = messageMaxRunes
         chunks = []
@@ -350,6 +351,15 @@ class Client extends EventEmitter
             create_at: Date.now()
             user_id: @self.id
             channel_id: channelID
+
+        if typeof msg is 'string'
+          postData.message = msg
+        else
+          postData.message = msg.message
+          if msg.props
+            postData.props = msg.props
+
+        console.log '=======postMessage data =======' + JSON.stringify postData
 
         # break apart long messages
         chunks = @_chunkMessage(postData.message)
@@ -400,12 +410,12 @@ class Client extends EventEmitter
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER ' + @token if @token
         @logger.debug "#{method} #{path}"
+        @logger.info 'api url:' + options.uri
         request options, (error, res, value) ->
             if error
                 if callback? then callback({'id': null, 'error': error.errno}, {}, callback_params)
             else
                 if callback?
-                    # some create method return 201 when successful, such as create channel
                     if res.statusCode is 200 or res.statusCode is 201
                         if typeof value == 'string'
                             value = JSON.parse(value)
