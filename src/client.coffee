@@ -324,12 +324,11 @@ class Client extends EventEmitter
               return @customMessage(postData, channelID)
             return true
 
-    createDirectChannel: (userID) ->
-        postData =
-            user_id: userID
-        @_apiCall 'POST', @channelRoute('create_direct'), postData, (data, headers) =>
-            @logger.debug 'Created Direct Channel.'
-            return data
+    createDirectChannel: (userID, callback) ->
+        postData = [userID, @self.id]
+        @_apiCall 'POST', '/channels/direct', postData, (data, headers) =>
+            @logger.info 'Created Direct Channel.'
+            if callback? then callback(data)
 
     findChannelByName: (name) ->
         for c of @channels
@@ -406,7 +405,8 @@ class Client extends EventEmitter
                 if callback? then callback({'id': null, 'error': error.errno}, {}, callback_params)
             else
                 if callback?
-                    if res.statusCode is 200
+                    # some create method return 201 when successful, such as create channel
+                    if res.statusCode is 200 or res.statusCode is 201
                         if typeof value == 'string'
                             value = JSON.parse(value)
                         callback(value, res.headers, callback_params)
