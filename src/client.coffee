@@ -81,7 +81,7 @@ class Client extends EventEmitter
 
     _onLoadUser: (data, headers, params) =>
         if data && not data.error
-          @users[data.id] = user
+          @users[data.id] = data
           @emit 'profilesLoaded', [data]
 
     _onChannels: (data, headers, params) =>
