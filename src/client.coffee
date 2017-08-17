@@ -309,7 +309,7 @@ class Client extends EventEmitter
         @channels
 
     getChannelByID: (id) ->
-        (i for i in @channels when i.id is id)[0]
+        @channels[id]
 
     customMessage: (postData, channelID) ->
         if postData.message?
