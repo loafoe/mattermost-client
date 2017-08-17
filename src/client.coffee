@@ -81,7 +81,7 @@ class Client extends EventEmitter
 
     _onLoadUser: (data, headers, params) =>
         if data && not data.error
-          @users[data.id] = user
+          @users[data.id] = data
           @emit 'profilesLoaded', [data]
 
     _onChannels: (data, headers, params) =>
@@ -298,12 +298,11 @@ class Client extends EventEmitter
             # check if channel in other direction exists
             channel = userID + "__" + @self.id
             channel = @findChannelByName(channel)
-            if !channel
-                # channel obviously doesn't exist, let's create it
-                channel = @createDirectChannel(userID)
-                if !channel
-                    if callback? then callback(null)
-        if callback? then callback(channel)
+        if channel
+            # channel obviously doesn't exist, let's create it
+            if callback? then callback(channel)
+            return
+        @createDirectChannel(userID,callback)
 
     getAllChannels: ->
         @channels
@@ -324,12 +323,11 @@ class Client extends EventEmitter
               return @customMessage(postData, channelID)
             return true
 
-    createDirectChannel: (userID) ->
-        postData =
-            user_id: userID
-        @_apiCall 'POST', @channelRoute('create_direct'), postData, (data, headers) =>
-            @logger.debug 'Created Direct Channel.'
-            return data
+    createDirectChannel: (userID, callback) ->
+        postData = [userID, @self.id]
+        @_apiCall 'POST', '/channels/direct', postData, (data, headers) =>
+            @logger.info 'Created Direct Channel.'
+            if callback? then callback(data)
 
     findChannelByName: (name) ->
         for c of @channels
@@ -338,6 +336,8 @@ class Client extends EventEmitter
         return null
 
     _chunkMessage: (msg) ->
+        if not msg  
+            return ['']
         message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length
         message_limit = messageMaxRunes
         chunks = []
@@ -351,6 +351,15 @@ class Client extends EventEmitter
             create_at: Date.now()
             user_id: @self.id
             channel_id: channelID
+
+        if typeof msg is 'string'
+          postData.message = msg
+        else
+          postData.message = msg.message
+          if msg.props
+            postData.props = msg.props
+
+        console.log '=======postMessage data =======' + JSON.stringify postData
 
         # break apart long messages
         chunks = @_chunkMessage(postData.message)
@@ -401,12 +410,13 @@ class Client extends EventEmitter
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER ' + @token if @token
         @logger.debug "#{method} #{path}"
+        @logger.info 'api url:' + options.uri
         request options, (error, res, value) ->
             if error
                 if callback? then callback({'id': null, 'error': error.errno}, {}, callback_params)
             else
                 if callback?
-                    if res.statusCode is 200
+                    if res.statusCode is 200 or res.statusCode is 201
                         if typeof value == 'string'
                             value = JSON.parse(value)
                         callback(value, res.headers, callback_params)
