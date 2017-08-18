@@ -55,7 +55,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if @options.wssPort? then ':'+ @options.wssPort else ':443') + '/api/v4/websocket'
+                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if (useTLS and @options.wssPort?) then ':'+@options.wssPort else '') + '/api/v4/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User data
                 @emit 'loggedIn', @self
@@ -336,7 +336,7 @@ class Client extends EventEmitter
         return null
 
     _chunkMessage: (msg) ->
-        if not msg  
+        if not msg
             return ['']
         message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length
         message_limit = messageMaxRunes
