@@ -348,7 +348,7 @@ class Client extends EventEmitter
         postData =
             message: msg
             filenames: []
-            create_at: Date.now()
+            create_at: 0
             user_id: @self.id
             channel_id: channelID
 
