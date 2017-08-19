@@ -101,7 +101,7 @@ class Client extends EventEmitter
             @logger.info 'Loaded Preferences...'
         else
             @logger.error 'Failed to load Preferences...' + data.error
-
+            @reconnect()
 
     _onMe: (data, headers, params) =>
         if data && not data.error
@@ -110,6 +110,7 @@ class Client extends EventEmitter
             @logger.info 'Loaded Me...'
         else
             @logger.error 'Failed to load Me...' + data.error
+            @reconnect()
 
     _onTeams: (data, headers, params) =>
         if data && not data.error
@@ -221,6 +222,7 @@ class Client extends EventEmitter
 
     reconnect: ->
         if @_reconnecting
+            @logger.info 'Already reconnecting, skipping call.'
             return
         @_reconnecting = true
         if @_pongTimeout
