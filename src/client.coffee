@@ -4,6 +4,7 @@ WebSocket   = require 'ws'
 TextEncoder = require 'text-encoding'
 Log            = require 'log'
 {EventEmitter} = require 'events'
+HttpsProxyAgent = require 'https-proxy-agent'
 defaultPingInterval = 60000
 
 User = require './user.coffee'
@@ -33,6 +34,7 @@ class Client extends EventEmitter
         @_pending = {}
         @_pingInterval = if @options.pingInterval? then @options.pingInterval else defaultPingInterval
         @autoReconnect = if @options.autoReconnect? then @options.autoReconnect else true
+        @httpProxy = if @options.httpProxy? then @options.httpProxy else false
         @_connecting = false
         @_reconnecting = false
 
@@ -171,6 +173,8 @@ class Client extends EventEmitter
         @logger.info 'Connecting...'
         options =
             rejectUnauthorized: tlsverify
+
+        options.agent = new HttpsProxyAgent(@httpProxy) if @httpProxy
 
         # Set up websocket connection to server
         @ws = new WebSocket @socketUrl, options
@@ -361,8 +365,6 @@ class Client extends EventEmitter
           if msg.props
             postData.props = msg.props
 
-        console.log '=======postMessage data =======' + JSON.stringify postData
-
         # break apart long messages
         chunks = @_chunkMessage(postData.message)
         postData.message = chunks.shift()
@@ -411,6 +413,7 @@ class Client extends EventEmitter
                 'Content-Type': 'application/json'
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
         options.headers['Authorization'] = 'BEARER ' + @token if @token
+        options.proxy = @httpProxy if @httpProxy
         @logger.debug "#{method} #{path}"
         @logger.info 'api url:' + options.uri
         request options, (error, res, value) ->
