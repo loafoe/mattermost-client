@@ -5,6 +5,7 @@ TextEncoder = require 'text-encoding'
 Log            = require 'log'
 {EventEmitter} = require 'events'
 HttpsProxyAgent = require 'https-proxy-agent'
+fs = require 'fs'
 defaultPingInterval = 60000
 
 User = require './user.coffee'
@@ -340,6 +341,33 @@ class Client extends EventEmitter
             if @channels[c].name == name or @channels[c].display_name == name
                 return @channels[c]
         return null
+
+    uploadFile: (channelID, file, callback) ->
+        formData = 
+            channel_id: channelID
+            files: fs.createReadStream(file)
+
+        options =
+            uri: (if useTLS then 'https://' else 'http://') + @host + (if @options.httpPort? then ':' + @options.httpPort else "") + apiPrefix + '/files'
+            method: 'POST'
+            rejectUnauthorized: tlsverify
+            headers:'Content-Type': 'multipart/form-data'
+            formData: formData
+    
+        options.headers['Authorization'] = 'BEARER ' + @token if @token
+        options.proxy = @httpProxy if @httpProxy
+        request.post options , (error, res, value) ->
+            if error
+                if callback? then callback({'id': null, 'error': error.errno}, {})
+            else
+                if callback?
+                    if res.statusCode is 201
+                        if typeof value == 'string'
+                            value = JSON.parse(value)
+                        callback(value, res.headers)
+                    else
+                        callback({'id': null, 'error': 'API response: ' + res.statusCode}, res.headers)
+
 
     _chunkMessage: (msg) ->
         if not msg
