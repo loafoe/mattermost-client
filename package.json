@@ -1,6 +1,6 @@
 {
   "name": "mattermost-client",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Mattermost client",
   "main": "./src/client",
   "scripts": {
