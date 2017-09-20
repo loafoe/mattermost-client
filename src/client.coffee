@@ -180,6 +180,7 @@ class Client extends EventEmitter
         @ws = new WebSocket @socketUrl, options
 
         @ws.on 'error', (error) =>
+            @_connecting = false
             @emit 'error', error
 
         @ws.on 'open', =>
@@ -218,6 +219,7 @@ class Client extends EventEmitter
 
         @ws.on 'close', (code, message) =>
             @emit 'close', code, message
+            @_connecting = false
             @connected = false
             @socketUrl = null
             if @autoReconnect
@@ -226,8 +228,8 @@ class Client extends EventEmitter
 
     reconnect: ->
         if @_reconnecting
-            @logger.info 'Already reconnecting, skipping call.'
-            return
+            @logger.info 'WARNING: Already reconnecting.'
+        @_connecting = false
         @_reconnecting = true
         if @_pongTimeout
             clearInterval @_pongTimeout
