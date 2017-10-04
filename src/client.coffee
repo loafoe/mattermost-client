@@ -177,6 +177,9 @@ class Client extends EventEmitter
         options.agent = new HttpsProxyAgent(@httpProxy) if @httpProxy
 
         # Set up websocket connection to server
+        if @ws
+            @ws.close()
+            @ws = null
         @ws = new WebSocket @socketUrl, options
 
         @ws.on 'error', (error) =>
