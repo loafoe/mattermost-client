@@ -128,6 +128,9 @@ class Client extends EventEmitter
             @loadUsers()
             @loadChannels()
             @connect() # FIXME
+        else
+            @logger.error 'Failed to load Teams...'
+            @reconnect()
 
     channelRoute: (channelId) ->
         @teamRoute() + '/channels/' + channelId
