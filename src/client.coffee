@@ -57,7 +57,7 @@ class Client extends EventEmitter
                 @authenticated = true
                 # Continue happy flow here
                 @token = headers.token
-                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if (useTLS and @options.wssPort?) then ':'+@options.wssPort else '') + '/api/v4/websocket'
+                @socketUrl = (if useTLS then 'wss://' else 'ws://') + @host + (if (useTLS and @options.wssPort?) then ':'+@options.wssPort else (if @options.httpPort? then ':' + @options.httpPort else '')) + '/api/v4/websocket'
                 @logger.info 'Websocket URL: ' + @socketUrl
                 @self = new User data
                 @emit 'loggedIn', @self
