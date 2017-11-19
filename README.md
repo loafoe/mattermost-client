@@ -26,10 +26,10 @@ The following environment variables may be defined to alter behavior:
 | MATTERMOST\_LOG\_LEVEL | No | (default: info) set log level (also: debug, ...) |
 | MATTERMOST\_USE\_TLS | No | (default: true) set to 'false' to use http/ws instead of https/wss |
 
-## Mattermost 4.3.0
+## Mattermost 4.4.0
 
 This client always tries to track the latest version of Mattermost.
-As version `4.3.0` of Mattermost might introduce backwards incompatible API changes make sure you are using the latest version of this library.
+As version `4.4.0` of Mattermost might introduce backwards incompatible API changes make sure you are using the latest version of this library.
 
 ## Older versions of Mattermost
 
