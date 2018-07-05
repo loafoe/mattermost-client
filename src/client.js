@@ -17,8 +17,8 @@ const {EventEmitter} = require('events');
 const HttpsProxyAgent = require('https-proxy-agent');
 const defaultPingInterval = 60000;
 
-const User = require('./user.coffee');
-const Message = require('./message.coffee');
+const User = require('./user');
+const Message = require('./message');
 
 const apiPrefix = '/api/v4';
 const usersRoute = '/users';
