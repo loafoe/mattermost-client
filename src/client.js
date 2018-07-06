@@ -1,13 +1,3 @@
-// TODO: This file was created by bulk-decaffeinate.
-// Sanity-check the conversion and remove this comment.
-/*
- * decaffeinate suggestions:
- * DS001: Remove Babel/TypeScript constructor workaround
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 const request     = require('request');
 const querystring = require('querystring');
 const WebSocket   = require('ws');
@@ -29,26 +19,13 @@ const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i
 
 class Client extends EventEmitter {
     constructor(host, group, email, password, options) {
-        {
-          // Hack: trick Babel/TypeScript into allowing this before super.
-          if (false) { super(); }
-          let thisFn = (() => { return this; }).toString();
-          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
-          eval(`${thisName} = this;`);
-        }
-        this._onLogin = this._onLogin.bind(this);
-        this._onLoadUsers = this._onLoadUsers.bind(this);
-        this._onLoadUser = this._onLoadUser.bind(this);
-        this._onChannels = this._onChannels.bind(this);
-        this._onPreferences = this._onPreferences.bind(this);
-        this._onMe = this._onMe.bind(this);
-        this._onTeams = this._onTeams.bind(this);
         this.host = host;
         this.group = group;
         this.email = email;
         this.password = password;
-        if (options == null) { options = {wssPort: 443, httpPort: 80}; }
-        this.options = options;
+
+        this.options = options ? {wssPort: 443, httpPort: 80} : options;
+
         this.authenticated = false;
         this.connected = false;
         this.token = null;
@@ -62,8 +39,15 @@ class Client extends EventEmitter {
         this.ws = null;
         this._messageID = 0;
         this._pending = {};
-        this._pingInterval = (this.options.pingInterval != null) ? this.options.pingInterval : defaultPingInterval;
-        this.autoReconnect = (this.options.autoReconnect != null) ? this.options.autoReconnect : true;
+
+        this._pingInterval = (this.options.pingInterval != null) 
+                            ? this.options.pingInterval
+                            : defaultPingInterval;
+
+        this.autoReconnect = (this.options.autoReconnect != null) 
+                            ? this.options.autoReconnect 
+                            : true;
+
         this.httpProxy = (this.options.httpProxy != null) ? this.options.httpProxy : false;
         this._connecting = false;
         this._reconnecting = false;
@@ -75,7 +59,8 @@ class Client extends EventEmitter {
 
     login() {
         this.logger.info('Logging in...');
-        return this._apiCall('POST', usersRoute + '/login', {login_id: this.email, password: this.password}, this._onLogin);
+        return this._apiCall('POST', usersRoute + '/login', 
+                            {login_id: this.email, password: this.password}, this._onLogin);
     }
 
     _onLogin(data, headers) {
@@ -106,7 +91,7 @@ class Client extends EventEmitter {
 
     _onLoadUsers(data, headers, params) {
         if (data && !data.error) {
-            for (let user of Array.from(data)) {
+            for (let user of data) {
               this.users[user.id] = user;
             }
             this.logger.info(`Found ${Object.keys(data).length} profiles.`);
@@ -129,7 +114,7 @@ class Client extends EventEmitter {
 
     _onChannels(data, headers, params) {
         if (data && !data.error) {
-            for (let channel of Array.from(data)) {
+            for (let channel of data) {
               this.channels[channel.id] = channel;
             }
             this.logger.info(`Found ${Object.keys(data).length} subscribed channels.`);
@@ -167,7 +152,7 @@ class Client extends EventEmitter {
             this.teams = data;
             this.emit('teamsLoaded', data);
             this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
-            for (let t of Array.from(this.teams)) {
+            for (let t of this.teams) {
                 this.logger.debug(`Testing ${t.name} == ${this.group}`);
                 if (t.name.toLowerCase() === this.group.toLowerCase()) {
                     this.logger.info(`Found team! ${t.id}`);
@@ -232,13 +217,11 @@ class Client extends EventEmitter {
 
 
     connect() {
-        if (this._connecting) {
-            return;
-        }
+        if (this._connecting) { return; }
+
         this._connecting = true;
         this.logger.info('Connecting...');
-        const options =
-            {rejectUnauthorized: tlsverify};
+        const options = {rejectUnauthorized: tlsverify};
 
         if (this.httpProxy) { options.agent = new HttpsProxyAgent(this.httpProxy); }
 
@@ -311,6 +294,7 @@ class Client extends EventEmitter {
         }
         this._connecting = false;
         this._reconnecting = true;
+
         if (this._pongTimeout) {
             clearInterval(this._pongTimeout);
             this._pongTimeout = null;
@@ -369,7 +353,7 @@ class Client extends EventEmitter {
                 return this.emit('new_user', message);
             default:
                 // Check for `pong` response
-                if (((message.data != null ? message.data.text : undefined) != null) && (message.data.text === "pong")) {
+                if (  (message.data ? message.data.text : undefined) && (message.data.text === "pong") ) {
                     this.logger.info('ACK ping (2)');
                     this._lastPong = Date.now();
                     return this.emit('ping', message);
@@ -539,15 +523,20 @@ class Client extends EventEmitter {
                 'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
             }
         };
+        
         if (this.token) { options.headers['Authorization'] = `BEARER ${this.token}`; }
         if (this.httpProxy) { options.proxy = this.httpProxy; }
+
         this.logger.debug(`${method} ${path}`);
         this.logger.info(`api url:${options.uri}`);
+
         return request(options, function(error, res, value) {
             if (error) {
-                if (callback != null) { return callback({'id': null, 'error': error.errno}, {}, callback_params); }
+                if (callback) { 
+                    return callback({'id': null, 'error': error.errno}, {}, callback_params); 
+                }
             } else {
-                if (callback != null) {
+                if (callback) {
                     if ((res.statusCode === 200) || (res.statusCode === 201)) {
                         if (typeof value === 'string') {
                             value = JSON.parse(value);
