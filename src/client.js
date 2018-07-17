@@ -19,12 +19,13 @@ const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i
 
 class Client extends EventEmitter {
     constructor(host, group, email, password, options) {
+        super();
         this.host = host;
         this.group = group;
         this.email = email;
         this.password = password;
 
-        this.options = options ? {wssPort: 443, httpPort: 80} : options;
+        this.options = options ? options : {wssPort: 443, httpPort: 80};
 
         this.authenticated = false;
         this.connected = false;
@@ -55,6 +56,15 @@ class Client extends EventEmitter {
         this._connAttempts  = 0;
 
         this.logger = new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
+
+        // Binding because async calls galore
+        this._onLogin = this._onLogin.bind(this);
+        this._onLoadUsers = this._onLoadUsers.bind(this);
+        this._onLoadUser = this._onLoadUser.bind(this);
+        this._onChannels = this._onChannels.bind(this);
+        this._onPreferences = this._onPreferences.bind(this);
+        this._onMe = this._onMe.bind(this);
+        this._onTeams = this._onTeams.bind(this);
     }
 
     login() {
