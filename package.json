@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/loafoe/mattermost-client#readme",
   "dependencies": {
-    "coffee-script": "^1.10.0",
     "https-proxy-agent": "^2.1.0",
     "log": "^1.4.0",
     "ws": "^1.0.1",
@@ -29,7 +28,7 @@
     "request": "^2.73.0"
   },
   "engines": {
-      "node": ">= 0.10.x",
-      "npm": ">= 1.1.x"
+    "node": ">= 0.10.x",
+    "npm": ">= 1.1.x"
   }
 }

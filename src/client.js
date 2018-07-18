@@ -1,0 +1,565 @@
+const request     = require('request');
+const querystring = require('querystring');
+const WebSocket   = require('ws');
+const TextEncoder = require('text-encoding');
+const Log            = require('log');
+const {EventEmitter} = require('events');
+const HttpsProxyAgent = require('https-proxy-agent');
+const defaultPingInterval = 60000;
+
+const User = require('./user');
+const Message = require('./message');
+
+const apiPrefix = '/api/v4';
+const usersRoute = '/users';
+const messageMaxRunes = 4000;
+
+const tlsverify = !(process.env.MATTERMOST_TLS_VERIFY || '').match(/^false|0|no|off$/i);
+const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i);
+
+class Client extends EventEmitter {
+    constructor(host, group, email, password, options) {
+        super();
+        this.host = host;
+        this.group = group;
+        this.email = email;
+        this.password = password;
+
+        this.options = options ? options : {wssPort: 443, httpPort: 80};
+
+        this.authenticated = false;
+        this.connected = false;
+        this.token = null;
+
+        this.self = null;
+        this.channels = {};
+        this.users = {};
+        this.teams = {};
+        this.teamID = null;
+
+        this.ws = null;
+        this._messageID = 0;
+        this._pending = {};
+
+        this._pingInterval = (this.options.pingInterval != null) 
+                            ? this.options.pingInterval
+                            : defaultPingInterval;
+
+        this.autoReconnect = (this.options.autoReconnect != null) 
+                            ? this.options.autoReconnect 
+                            : true;
+
+        this.httpProxy = (this.options.httpProxy != null) ? this.options.httpProxy : false;
+        this._connecting = false;
+        this._reconnecting = false;
+
+        this._connAttempts  = 0;
+
+        this.logger = new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
+
+        // Binding because async calls galore
+        this._onLogin = this._onLogin.bind(this);
+        this._onLoadUsers = this._onLoadUsers.bind(this);
+        this._onLoadUser = this._onLoadUser.bind(this);
+        this._onChannels = this._onChannels.bind(this);
+        this._onPreferences = this._onPreferences.bind(this);
+        this._onMe = this._onMe.bind(this);
+        this._onTeams = this._onTeams.bind(this);
+    }
+
+    login() {
+        this.logger.info('Logging in...');
+        return this._apiCall('POST', usersRoute + '/login', 
+                            {login_id: this.email, password: this.password}, this._onLogin);
+    }
+
+    _onLogin(data, headers) {
+        if (data) {
+            if (!data.id) {
+                this.logger.error('Login call failed');
+                this.authenticated = false;
+                this._reconnecting = false;
+                return this.reconnect();
+            } else {
+                this.authenticated = true;
+                // Continue happy flow here
+                this.token = headers.token;
+                this.socketUrl = (useTLS ? 'wss://' : 'ws://') + this.host + ((useTLS && (this.options.wssPort != null)) ? `:${this.options.wssPort}` : ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '')) + '/api/v4/websocket';
+                this.logger.info(`Websocket URL: ${this.socketUrl}`);
+                this.self = new User(data);
+                this.emit('loggedIn', this.self);
+                this.getMe();
+                this.getPreferences();
+                return this.getTeams();
+            }
+        } else {
+            this.emit('error', data);
+            this.authenticated = false;
+            return this.reconnect();
+        }
+    }
+
+    _onLoadUsers(data, headers, params) {
+        if (data && !data.error) {
+            for (let user of data) {
+              this.users[user.id] = user;
+            }
+            this.logger.info(`Found ${Object.keys(data).length} profiles.`);
+            this.emit('profilesLoaded', data);
+            if ((Object.keys(data).length > 0) && (params.page != null)) {
+              return this.loadUsers(params.page+1); // Trigger next page loading
+          }
+        } else {
+            this.logger.error('Failed to load profiles from server.');
+            return this.emit('error', { msg: 'failed to load profiles'});
+        }
+    }
+
+    _onLoadUser(data, headers, params) {
+        if (data && !data.error) {
+          this.users[data.id] = data;
+          return this.emit('profilesLoaded', [data]);
+      }
+    }
+
+    _onChannels(data, headers, params) {
+        if (data && !data.error) {
+            for (let channel of data) {
+              this.channels[channel.id] = channel;
+            }
+            this.logger.info(`Found ${Object.keys(data).length} subscribed channels.`);
+            return this.emit('channelsLoaded', data);
+        } else {
+            this.logger.error(`Failed to get subscribed channels list from server: ${data.error}`);
+            return this.emit('error', { msg: 'failed to get channel list'});
+        }
+    }
+
+    _onPreferences(data, headers, params) {
+        if (data && !data.error) {
+            this.preferences = data;
+            this.emit('preferencesLoaded', data);
+            return this.logger.info('Loaded Preferences...');
+        } else {
+            this.logger.error(`Failed to load Preferences...${data.error}`);
+            return this.reconnect();
+        }
+    }
+
+    _onMe(data, headers, params) {
+        if (data && !data.error) {
+            this.me = data;
+            this.emit('meLoaded', data);
+            return this.logger.info('Loaded Me...');
+        } else {
+            this.logger.error(`Failed to load Me...${data.error}`);
+            return this.reconnect();
+        }
+    }
+
+    _onTeams(data, headers, params) {
+        if (data && !data.error) {
+            this.teams = data;
+            this.emit('teamsLoaded', data);
+            this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
+            for (let t of this.teams) {
+                this.logger.debug(`Testing ${t.name} == ${this.group}`);
+                if (t.name.toLowerCase() === this.group.toLowerCase()) {
+                    this.logger.info(`Found team! ${t.id}`);
+                    this.teamID = t.id;
+                    break;
+                }
+            }
+            this.loadUsers();
+            this.loadChannels();
+            return this.connect(); // FIXME
+        } else {
+            this.logger.error('Failed to load Teams...');
+            return this.reconnect();
+        }
+    }
+
+    channelRoute(channelId) {
+        return this.teamRoute() + '/channels/' + channelId;
+    }
+
+    teamRoute() {
+        return usersRoute + '/me/teams/' + this.teamID;
+    }
+
+    getMe() {
+        const uri = usersRoute + '/me';
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onMe);
+    }
+
+    getPreferences() {
+        const uri = usersRoute + '/me/preferences';
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onPreferences);
+    }
+
+    getTeams() {
+        const uri = usersRoute + '/me/teams';
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onTeams);
+    }
+
+    loadUsers(page) {
+        if (page == null) { page = 0; }
+        const uri =  `/users?page=${page}&per_page=200&in_team=${this.teamID}`;
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
+    }
+
+    loadUser(user_id) {
+        const uri = `/users/${user_id}`;
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onLoadUser, {});
+    }
+
+    loadChannels(page) {
+        if (page == null) { page = 0; }
+        const uri = `/users/me/teams/${this.teamID}/channels`;
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onChannels);
+    }
+
+
+    connect() {
+        if (this._connecting) { return; }
+
+        this._connecting = true;
+        this.logger.info('Connecting...');
+        const options = {rejectUnauthorized: tlsverify};
+
+        if (this.httpProxy) { options.agent = new HttpsProxyAgent(this.httpProxy); }
+
+        // Set up websocket connection to server
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        this.ws = new WebSocket(this.socketUrl, options);
+
+        this.ws.on('error', error => {
+            this._connecting = false;
+            return this.emit('error', error);
+        });
+
+        this.ws.on('open', () => {
+            this._connecting = false;
+            this._reconnecting = false;
+            this.connected = true;
+            this.emit('connected');
+            this._connAttempts = 0;
+            this._lastPong = Date.now();
+            const challenge = {
+              "action": "authentication_challenge",
+              "data": {
+                "token": this.token
+              }
+            };
+            this.logger.info('Sending challenge...');
+            this._send(challenge);
+            this.logger.info('Starting pinger...');
+            return this._pongTimeout = setInterval(() => {
+                if (!this.connected) {
+                    this.logger.error('Not connected in pongTimeout');
+                    this.reconnect();
+                    return;
+                }
+                if ((this._lastPong != null) && ((Date.now() - this._lastPong) > (2*this._pingInterval))) {
+                    this.logger.error("Last pong is too old: %d", (Date.now() - this._lastPong) / 1000);
+                    this.authenticated = false;
+                    this.connected = false;
+                    return this.reconnect();
+                } else {
+                    this.logger.info('ping');
+                    return this._send({"action": "ping"});
+                }
+            }
+            , this._pingInterval);
+        });
+
+        this.ws.on('message', (data, flags) => {
+            return this.onMessage(JSON.parse(data));
+        });
+
+        this.ws.on('close', (code, message) => {
+            this.emit('close', code, message);
+            this._connecting = false;
+            this.connected = false;
+            this.socketUrl = null;
+            if (this.autoReconnect) {
+                return this.reconnect();
+            }
+        });
+        return true;
+    }
+
+    reconnect() {
+        if (this._reconnecting) {
+            this.logger.info('WARNING: Already reconnecting.');
+        }
+        this._connecting = false;
+        this._reconnecting = true;
+
+        if (this._pongTimeout) {
+            clearInterval(this._pongTimeout);
+            this._pongTimeout = null;
+        }
+        this.authenticated = false;
+
+        if (this.ws) {
+            this.ws.close();
+        }
+
+        this._connAttempts++;
+
+        const timeout = this._connAttempts * 1000;
+        this.logger.info("Reconnecting in %dms", timeout);
+        return setTimeout(() => {
+            this.logger.info('Attempting reconnect');
+            return this.login();
+        }
+        , timeout);
+    }
+
+
+    disconnect() {
+        if (!this.connected) {
+            return false;
+        } else {
+            this.autoReconnect = false;
+            if (this._pongTimeout) {
+                clearInterval(this._pongTimeout);
+                this._pongTimeout = null;
+            }
+            this.ws.close();
+            return true;
+        }
+    }
+
+    onMessage(message) {
+        this.emit('raw_message', message);
+        const m = new Message(message);
+        switch (message.event) {
+            case 'ping':
+                // Deprecated
+                this.logger.info('ACK ping');
+                this._lastPong = Date.now();
+                return this.emit('ping', message);
+            case 'posted':
+                return this.emit('message', m);
+            case 'hello': case 'typing': case 'post_edit': case 'post_deleted': case 'user_added': case 'user_removed': case 'status_change': case 'user_role_updated':
+                // Generic handler
+                return this.emit(message.event, message);
+            case 'channel_viewed': case 'preference_changed': case 'ephemeral_message':
+                // These are personal messages
+                return this.emit(message.event, message);
+            case 'new_user':
+                this.loadUser(message.data.user_id);
+                return this.emit('new_user', message);
+            default:
+                // Check for `pong` response
+                if (  (message.data ? message.data.text : undefined) && (message.data.text === "pong") ) {
+                    this.logger.info('ACK ping (2)');
+                    this._lastPong = Date.now();
+                    return this.emit('ping', message);
+                } else {
+                    this.logger.debug('Received unhandled message:');
+                    return this.logger.debug(message);
+                }
+        }
+    }
+
+    getUserByID(id) {
+        return this.users[id];
+    }
+
+    getUserByEmail(email) {
+        for (let u in this.users) {
+            if (this.users[u].email === email) {
+                return this.users[u];
+            }
+        }
+    }
+
+    getUserDirectMessageChannel(userID, callback) {
+        // check if channel already exists
+        let channel = this.self.id + "__" + userID;
+        channel = this.findChannelByName(channel);
+        if (!channel) {
+            // check if channel in other direction exists
+            channel = userID + "__" + this.self.id;
+            channel = this.findChannelByName(channel);
+        }
+        if (channel) {
+            // channel obviously doesn't exist, let's create it
+            if (callback != null) { callback(channel); }
+            return;
+        }
+        return this.createDirectChannel(userID,callback);
+    }
+
+    getAllChannels() {
+        return this.channels;
+    }
+
+    getChannelByID(id) {
+        return this.channels[id];
+    }
+
+    customMessage(postData, channelID) {
+        let chunks;
+        if (postData.message != null) {
+            chunks = this._chunkMessage(postData.message);
+            postData.message = chunks.shift();
+        }
+        postData.channel_id = channelID;
+        return this._apiCall('POST', '/posts', postData, (data, header) => {
+            this.logger.debug('Posted custom message.');
+            if ((chunks != null ? chunks.length : undefined) > 0) {
+              this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
+              postData.message = chunks.join();
+              return this.customMessage(postData, channelID);
+          }
+            return true;
+        });
+    }
+
+    createDirectChannel(userID, callback) {
+        const postData = [userID, this.self.id];
+        return this._apiCall('POST', '/channels/direct', postData, (data, headers) => {
+            this.logger.info('Created Direct Channel.');
+            if (callback != null) { return callback(data); }
+        });
+    }
+
+    findChannelByName(name) {
+        for (let c in this.channels) {
+            if ((this.channels[c].name === name) || (this.channels[c].display_name === name)) {
+                return this.channels[c];
+            }
+        }
+        return null;
+    }
+
+    _chunkMessage(msg) {
+        if (!msg) {
+            return [''];
+        }
+        const message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length;
+        const message_limit = messageMaxRunes;
+        let chunks = [];
+        chunks = msg.match(new RegExp(`(.|[\r\n]){1,${message_limit}}`,"g"));
+        return chunks;
+    }
+
+    postMessage(msg, channelID) {
+        const postData = {
+            message: msg,
+            filenames: [],
+            create_at: 0,
+            user_id: this.self.id,
+            channel_id: channelID
+        };
+
+        if (typeof msg === 'string') {
+          postData.message = msg;
+        } else {
+          postData.message = msg.message;
+          if (msg.props) {
+            postData.props = msg.props;
+        }
+      }
+
+        // break apart long messages
+        const chunks = this._chunkMessage(postData.message);
+        postData.message = chunks.shift();
+
+        return this._apiCall('POST', '/posts', postData, (data, header) => {
+            this.logger.debug('Posted message.');
+
+            if ((chunks != null ? chunks.length : undefined) > 0) {
+              msg = chunks.join();
+              this.logger.debug(`Recursively posting remainder of message: (${(chunks != null ? chunks.length : undefined)})`);
+              return this.postMessage(msg, channelID);
+          }
+
+            return true;
+        });
+    }
+
+    setChannelHeader(channelID, header) {
+        const postData = {
+            channel_id: channelID,
+            channel_header: header
+        };
+
+        return this._apiCall('POST', this.teamRoute() + '/channels/update_header', postData, (data, header) => {
+            this.logger.debug('Channel header updated.');
+            return true;
+        });
+    }
+
+    // Private functions
+    //
+    _send(message) {
+        if (!this.connected) {
+            return false;
+        } else {
+            message.id = ++this._messageID;
+            message.seq = message.id;
+            this._pending[message.id] = message;
+            this.ws.send(JSON.stringify(message));
+            return message;
+        }
+    }
+
+
+    _apiCall(method, path, params, callback, callback_params) {
+        if (callback_params == null) { callback_params = {}; }
+        let post_data = '';
+        if (params != null) { post_data = JSON.stringify(params); }
+        const options = {
+            uri: (useTLS ? 'https://' : 'http://') + this.host + ((this.options.httpPort != null) ? `:${this.options.httpPort}` : "") + apiPrefix + path,
+            method,
+            json: params,
+            rejectUnauthorized: tlsverify,
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
+            }
+        };
+        
+        if (this.token) { options.headers['Authorization'] = `BEARER ${this.token}`; }
+        if (this.httpProxy) { options.proxy = this.httpProxy; }
+
+        this.logger.debug(`${method} ${path}`);
+        this.logger.info(`api url:${options.uri}`);
+
+        return request(options, function(error, res, value) {
+            if (error) {
+                if (callback) { 
+                    return callback({'id': null, 'error': error.errno}, {}, callback_params); 
+                }
+            } else {
+                if (callback) {
+                    if ((res.statusCode === 200) || (res.statusCode === 201)) {
+                        if (typeof value === 'string') {
+                            value = JSON.parse(value);
+                        }
+                        return callback(value, res.headers, callback_params);
+                    } else {
+                        return callback({'id': null, 'error': `API response: ${res.statusCode}`}, res.headers, callback_params);
+                    }
+                }
+            }
+        });
+    }
+}
+
+
+module.exports = Client;
