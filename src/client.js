@@ -429,6 +429,25 @@ class Client extends EventEmitter {
         });
     }
 
+    react(messageID, emoji) {
+        const postData = {
+            user_id: this.self.id,
+            post_id: messageID,
+            emoji_name: emoji,
+            create_at: 0
+        };
+        return this._apiCall('POST', '/reactions', postData, (data, headers) => {
+            this.logger.debug('Created reaction');
+        });
+    }
+
+    unreact(messageID, emoji) {
+        const uri = `/users/me/posts/${messageID}/reactions/${emoji}`;
+        return this._apiCall('DELETE', uri, [], (data, headers) => {
+            this.logger.debug('Deleted reaction');
+        });
+    }
+
     createDirectChannel(userID, callback) {
         const postData = [userID, this.self.id];
         return this._apiCall('POST', '/channels/direct', postData, (data, headers) => {
