@@ -92,7 +92,7 @@ class Client extends EventEmitter {
             } else {
                 this.authenticated = true;
                 // Continue happy flow here
-                if !(this.personalAccessToken) {
+                if (!this.personalAccessToken) {
                     this.token = headers.token;
                 }
                 this.socketUrl = (useTLS ? 'wss://' : 'ws://') + this.host + ((useTLS && (this.options.wssPort != null)) ? `:${this.options.wssPort}` : ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '')) + '/api/v4/websocket';
