@@ -9,7 +9,8 @@ The initial implementation thus contains only the minimal set of API calls to su
 
 ## Highlights
 
-- Logs into Mattermost team server with username and password
+- Logs into Mattermost team server with username and password ..OR..
+- Uses a personal access token for authentication
 - Connects via websocket for real-time interaction
 - Can post messages to joined channels
 - Can be invited to channels / DMs since its just a regular user
