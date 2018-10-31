@@ -1,5 +1,4 @@
 const request     = require('request');
-const querystring = require('querystring');
 const WebSocket   = require('ws');
 const TextEncoder = require('text-encoding');
 const Log            = require('log');
@@ -333,7 +332,7 @@ class Client extends EventEmitter {
         return setTimeout(() => {
             this.logger.info('Attempting reconnect');
             if (this.personalAccessToken) {
-              return this.loginToken(this.personalAccessToken)
+              return this.tokenLogin(this.personalAccessToken)
             }
             return this.login(this.email, this.password);
         }
@@ -366,11 +365,29 @@ class Client extends EventEmitter {
                 return this.emit('ping', message);
             case 'posted':
                 return this.emit('message', m);
-            case 'hello': case 'typing': case 'post_edit': case 'post_deleted': case 'user_added': case 'user_removed': case 'status_change': case 'user_role_updated':
+            case 'added_to_team':
+            case 'authentication_challenge':
+            case 'channel_converted':
+            case 'channel_created':
+            case 'channel_deleted':
+            case 'channel_member_updated':
+            case 'channel_updated':
+            case 'channel_viewed':
+            case 'config_changed':
+            case 'delete_team':
+            case 'ephemeral_message':
+            case 'hello':
+            case 'typing':
+            case 'post_edit':
+            case 'post_deleted':
+            case 'preference_changed':
+            case 'user_added':
+            case 'user_removed':
+            case 'user_role_updated':
+            case 'user_updated':
+            case 'status_change':
+            case 'webrtc':
                 // Generic handler
-                return this.emit(message.event, message);
-            case 'channel_viewed': case 'preference_changed': case 'ephemeral_message':
-                // These are personal messages
                 return this.emit(message.event, message);
             case 'new_user':
                 this.loadUser(message.data.user_id);
