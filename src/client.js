@@ -64,13 +64,14 @@ class Client extends EventEmitter {
         this._onTeams = this._onTeams.bind(this);
     }
 
-    login(email, password) {
+    login(email, password, mfaToken) {
         this.personalAccessToken = false;
         this.email = email;
         this.password = password;
+        this.mfaToken = mfaToken;
         this.logger.info('Logging in...');
         return this._apiCall('POST', usersRoute + '/login',
-                            {login_id: this.email, password: this.password}, this._onLogin);
+                            {login_id: this.email, password: this.password, token: this.mfaToken}, this._onLogin);
     }
 
     tokenLogin(token) {
@@ -84,7 +85,7 @@ class Client extends EventEmitter {
     _onLogin(data, headers) {
         if (data) {
             if (!data.id) {
-                this.logger.error('Login call failed');
+                this.logger.error('Login call failed', JSON.stringify(data));
                 this.authenticated = false;
                 this._reconnecting = false;
                 return this.reconnect();
@@ -334,7 +335,7 @@ class Client extends EventEmitter {
             if (this.personalAccessToken) {
               return this.tokenLogin(this.personalAccessToken)
             }
-            return this.login(this.email, this.password);
+            return this.login(this.email, this.password, this.mfaToken);
         }
         , timeout);
     }
@@ -603,7 +604,7 @@ class Client extends EventEmitter {
                         }
                         return callback(value, res.headers, callback_params);
                     } else {
-                        return callback({'id': null, 'error': `API response: ${res.statusCode}`}, res.headers, callback_params);
+                        return callback({'id': null, 'error': `API response: ${res.statusCode} ${JSON.stringify(value)}`}, res.headers, callback_params);
                     }
                 }
             }
