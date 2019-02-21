@@ -333,7 +333,7 @@ class Client extends EventEmitter {
         return setTimeout(() => {
             this.logger.info('Attempting reconnect');
             if (this.personalAccessToken) {
-              return this.tokenLogin(this.personalAccessToken)
+              return this.tokenLogin(this.token)
             }
             return this.login(this.email, this.password, this.mfaToken);
         }
