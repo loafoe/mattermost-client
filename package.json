@@ -1,6 +1,6 @@
 {
   "name": "mattermost-client",
-  "version": "6.1.0",
+  "version": "6.1.1",
   "description": "Mattermost client",
   "main": "./src/client",
   "scripts": {
@@ -21,11 +21,12 @@
   },
   "homepage": "https://github.com/loafoe/mattermost-client#readme",
   "dependencies": {
+    "extend": "^3.0.2",
     "https-proxy-agent": "^2.1.0",
     "log": "^1.4.0",
-    "ws": "^1.0.1",
+    "request": "^2.88.0",
     "text-encoding": "^0.5.5",
-    "request": "^2.73.0"
+    "ws": "^1.0.1"
   },
   "engines": {
     "node": ">= 0.10.x",
