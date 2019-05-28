@@ -461,6 +461,17 @@ class Client extends EventEmitter {
         });
     }
 
+    dialog(trigger_id, url, dialog) {
+        const postData = {
+            trigger_id: trigger_id,
+            url: url,
+            dialog: dialog
+        };
+        return this._apiCall('POST', '/actions/dialogs/open', postData, (data, headers) => {
+            this.logger.debug('Created dialog');
+        });
+    }
+    
     react(messageID, emoji) {
         const postData = {
             user_id: this.self.id,
