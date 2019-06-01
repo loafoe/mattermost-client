@@ -472,6 +472,31 @@ class Client extends EventEmitter {
         });
     }
     
+    editPost(post_id, msg) {
+        let postData = msg;
+        if (typeof msg === 'string') {
+            postData = {
+                id: post_id,
+                message: msg
+            };
+        }
+        return this._apiCall('PUT', '/posts/' + post_id, postData, (data, headers) => {
+            this.logger.debug('Edited post');
+        });
+    }
+
+    uploadFile(channel_id, file, callback) {
+        const formData = {
+            channel_id: channel_id,
+            files: file
+        }
+
+        return this._apiCall({ method: 'POST'}, '/files', formData, (data, headers) => {
+            this.logger.debug('Posted file');
+            return callback(data);
+        });
+    }
+    
     react(messageID, emoji) {
         const postData = {
             user_id: this.self.id,
@@ -522,7 +547,7 @@ class Client extends EventEmitter {
     postMessage(msg, channelID) {
         const postData = {
             message: msg,
-            filenames: [],
+            file_ids: [],
             create_at: 0,
             user_id: this.self.id,
             channel_id: channelID
@@ -582,6 +607,11 @@ class Client extends EventEmitter {
 
 
     _apiCall(method, path, params, callback, callback_params) {
+        let isForm = false;
+        if (typeof method !== 'string') {
+            isForm = true;
+            method = method.method;
+        }
         if (callback_params == null) { callback_params = {}; }
         let post_data = '';
         if (params != null) { post_data = JSON.stringify(params); }
@@ -598,6 +628,13 @@ class Client extends EventEmitter {
 
         if (this.token) { options.headers['Authorization'] = `BEARER ${this.token}`; }
         if (this.httpProxy) { options.proxy = this.httpProxy; }
+
+        if (isForm) {
+            options.headers['Content-Type'] = 'multipart/form-data';
+            delete options.headers['Content-Length'];
+            delete options.json;
+            options.formData = params;
+        }
 
         this.logger.debug(`${method} ${path}`);
         this.logger.info(`api url:${options.uri}`);
