@@ -559,6 +559,8 @@ class Client extends EventEmitter {
           postData.message = msg.message;
           if (msg.props) {
             postData.props = msg.props;
+        } if (msg.file_ids) {
+            postData.file_ids = msg.file_ids;
         }
       }
 
