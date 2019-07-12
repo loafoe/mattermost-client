@@ -1,6 +1,6 @@
 {
   "name": "mattermost-client",
-  "version": "6.1.1",
+  "version": "6.1.2",
   "description": "Mattermost client",
   "main": "./src/client",
   "scripts": {
@@ -26,7 +26,7 @@
     "log": "^1.4.0",
     "request": "^2.88.0",
     "text-encoding": "^0.5.5",
-    "ws": "^1.0.1"
+    "ws": ">=3.3.1"
   },
   "engines": {
     "node": ">= 0.10.x",
