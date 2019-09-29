@@ -537,7 +537,6 @@ class Client extends EventEmitter {
         if (!msg) {
             return [''];
         }
-        const message_length = new TextEncoder.TextEncoder('utf-8').encode(msg).length;
         const message_limit = messageMaxRunes;
         let chunks = [];
         chunks = msg.match(new RegExp(`(.|[\r\n]){1,${message_limit}}`,"g"));
