@@ -95,7 +95,8 @@ class Client extends EventEmitter {
                 if (!this.personalAccessToken) {
                     this.token = headers.token;
                 }
-                this.socketUrl = (useTLS ? 'wss://' : 'ws://') + this.host + ((useTLS && (this.options.wssPort != null)) ? `:${this.options.wssPort}` : ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '')) + '/api/v4/websocket';
+                // TODO: split into multiple lines
+                this.socketUrl = (useTLS ? 'wss://' : 'ws://') + this.host + ((useTLS && (this.options.wssPort != null)) ? `:${this.options.wssPort}` : ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '')) + apiPrefix + '/websocket';
                 this.logger.info(`Websocket URL: ${this.socketUrl}`);
                 this.self = new User(data);
                 this.emit('loggedIn', this.self);
