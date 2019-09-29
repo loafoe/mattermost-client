@@ -25,7 +25,7 @@
     "https-proxy-agent": "^2.1.0",
     "log": "^1.4.0",
     "request": "^2.88.0",
-    "text-encoding": "^0.5.5",
+    "text-encoding": "^0.7.0",
     "ws": ">=3.3.1"
   },
   "engines": {
