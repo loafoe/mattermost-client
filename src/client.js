@@ -75,9 +75,9 @@ class Client extends EventEmitter {
     }
 
     tokenLogin(token) {
-      this.token = token
-      this.personalAccessToken = true
-      this.logger.info('Logging in with personal access token...')
+      this.token = token;
+      this.personalAccessToken = true;
+      this.logger.info('Logging in with personal access token...');
       const uri = usersRoute + '/me';
       return this._apiCall('GET', uri, null, this._onLogin);
     }
