@@ -174,11 +174,11 @@ class Client extends EventEmitter {
             this.teams = data;
             this.emit('teamsLoaded', data);
             this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
-            for (let t of this.teams) {
-                this.logger.debug(`Testing ${t.name} == ${this.group}`);
-                if (t.name.toLowerCase() === this.group.toLowerCase()) {
-                    this.logger.info(`Found team! ${t.id}`);
-                    this.teamID = t.id;
+            for (let team of this.teams) {
+                this.logger.debug(`Testing ${team.name} == ${this.group}`);
+                if (team.name.toLowerCase() === this.group.toLowerCase()) {
+                    this.logger.info(`Found team! ${team.id}`);
+                    this.teamID = team.id;
                     break;
                 }
             }
@@ -412,9 +412,9 @@ class Client extends EventEmitter {
     }
 
     getUserByEmail(email) {
-        for (let u in this.users) {
-            if (this.users[u].email === email) {
-                return this.users[u];
+        for (let user in this.users) {
+            if (this.users[user].email === email) {
+                return this.users[user];
             }
         }
     }
@@ -526,9 +526,9 @@ class Client extends EventEmitter {
     }
 
     findChannelByName(name) {
-        for (let c in this.channels) {
-            if ((this.channels[c].name === name) || (this.channels[c].display_name === name)) {
-                return this.channels[c];
+        for (let channel in this.channels) {
+            if ((this.channels[channel].name === name) || (this.channels[channel].display_name === name)) {
+                return this.channels[channel];
             }
         }
         return null;
