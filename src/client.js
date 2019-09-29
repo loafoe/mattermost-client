@@ -70,8 +70,16 @@ class Client extends EventEmitter {
         this.password = password;
         this.mfaToken = mfaToken;
         this.logger.info('Logging in...');
-        return this._apiCall('POST', usersRoute + '/login',
-                            {login_id: this.email, password: this.password, token: this.mfaToken}, this._onLogin);
+        return this._apiCall(
+            'POST',
+            usersRoute + '/login',
+            {
+                login_id: this.email,
+                password: this.password,
+                token: this.mfaToken
+            },
+            this._onLogin
+        );
     }
 
     tokenLogin(token) {
@@ -331,14 +339,16 @@ class Client extends EventEmitter {
 
         const timeout = this._connAttempts * 1000;
         this.logger.info("Reconnecting in %dms", timeout);
-        return setTimeout(() => {
+        return setTimeout(
+            () => {
             this.logger.info('Attempting reconnect');
             if (this.personalAccessToken) {
               return this.tokenLogin(this.token)
             }
             return this.login(this.email, this.password, this.mfaToken);
-        }
-        , timeout);
+            },
+            timeout
+        );
     }
 
 
