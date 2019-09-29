@@ -554,15 +554,16 @@ class Client extends EventEmitter {
         };
 
         if (typeof msg === 'string') {
-          postData.message = msg;
+            postData.message = msg;
         } else {
-          postData.message = msg.message;
-          if (msg.props) {
-            postData.props = msg.props;
-        } if (msg.file_ids) {
-            postData.file_ids = msg.file_ids;
+            postData.message = msg.message;
+            if (msg.props) {
+                postData.props = msg.props;
+            }
+            if (msg.file_ids) {
+                postData.file_ids = msg.file_ids;
+            }
         }
-      }
 
         // break apart long messages
         const chunks = this._chunkMessage(postData.message);
