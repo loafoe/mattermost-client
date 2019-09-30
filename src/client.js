@@ -634,7 +634,8 @@ class Client extends EventEmitter {
             rejectUnauthorized: tlsverify,
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length
+                'Content-Length': new TextEncoder.TextEncoder('utf-8').encode(post_data).length,
+                'X-Requested-With': 'XMLHttpRequest'
             }
         };
 
