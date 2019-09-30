@@ -119,7 +119,7 @@ class Client extends EventEmitter {
         }
     }
 
-    _onLoadUsers(data, headers, params) {
+    _onLoadUsers(data, _headers, params) {
         if (data && !data.error) {
             for (let user of data) {
               this.users[user.id] = user;
@@ -135,14 +135,14 @@ class Client extends EventEmitter {
         }
     }
 
-    _onLoadUser(data, headers, params) {
+    _onLoadUser(data, _headers, _params) {
         if (data && !data.error) {
           this.users[data.id] = data;
           return this.emit('profilesLoaded', [data]);
       }
     }
 
-    _onChannels(data, headers, params) {
+    _onChannels(data, _headers, _params) {
         if (data && !data.error) {
             for (let channel of data) {
               this.channels[channel.id] = channel;
@@ -155,7 +155,7 @@ class Client extends EventEmitter {
         }
     }
 
-    _onPreferences(data, headers, params) {
+    _onPreferences(data, _headers, _params) {
         if (data && !data.error) {
             this.preferences = data;
             this.emit('preferencesLoaded', data);
@@ -166,7 +166,7 @@ class Client extends EventEmitter {
         }
     }
 
-    _onMe(data, headers, params) {
+    _onMe(data, _headers, _params) {
         if (data && !data.error) {
             this.me = data;
             this.emit('meLoaded', data);
@@ -177,7 +177,7 @@ class Client extends EventEmitter {
         }
     }
 
-    _onTeams(data, headers, params) {
+    _onTeams(data, _headers, _params) {
         if (data && !data.error) {
             this.teams = data;
             this.emit('teamsLoaded', data);
@@ -302,7 +302,7 @@ class Client extends EventEmitter {
             , this._pingInterval);
         });
 
-        this.ws.on('message', (data, flags) => {
+        this.ws.on('message', (data, _flags) => {
             return this.onMessage(JSON.parse(data));
         });
 
@@ -461,7 +461,7 @@ class Client extends EventEmitter {
             postData.message = chunks.shift();
         }
         postData.channel_id = channelID;
-        return this._apiCall('POST', '/posts', postData, (data, header) => {
+        return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
             this.logger.debug('Posted custom message.');
             if ((chunks != null ? chunks.length : undefined) > 0) {
               this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
@@ -478,7 +478,7 @@ class Client extends EventEmitter {
             url: url,
             dialog: dialog
         };
-        return this._apiCall('POST', '/actions/dialogs/open', postData, (data, headers) => {
+        return this._apiCall('POST', '/actions/dialogs/open', postData, (_data, _headers) => {
             this.logger.debug('Created dialog');
         });
     }
@@ -491,7 +491,7 @@ class Client extends EventEmitter {
                 message: msg
             };
         }
-        return this._apiCall('PUT', '/posts/' + post_id, postData, (data, headers) => {
+        return this._apiCall('PUT', '/posts/' + post_id, postData, (_data, _headers) => {
             this.logger.debug('Edited post');
         });
     }
@@ -502,7 +502,7 @@ class Client extends EventEmitter {
             files: file
         }
 
-        return this._apiCall({ method: 'POST'}, '/files', formData, (data, headers) => {
+        return this._apiCall({ method: 'POST'}, '/files', formData, (data, _headers) => {
             this.logger.debug('Posted file');
             return callback(data);
         });
@@ -515,21 +515,21 @@ class Client extends EventEmitter {
             emoji_name: emoji,
             create_at: 0
         };
-        return this._apiCall('POST', '/reactions', postData, (data, headers) => {
+        return this._apiCall('POST', '/reactions', postData, (_data, _headers) => {
             this.logger.debug('Created reaction');
         });
     }
 
     unreact(messageID, emoji) {
         const uri = `/users/me/posts/${messageID}/reactions/${emoji}`;
-        return this._apiCall('DELETE', uri, [], (data, headers) => {
+        return this._apiCall('DELETE', uri, [], (_data, _headers) => {
             this.logger.debug('Deleted reaction');
         });
     }
 
     createDirectChannel(userID, callback) {
         const postData = [userID, this.self.id];
-        return this._apiCall('POST', '/channels/direct', postData, (data, headers) => {
+        return this._apiCall('POST', '/channels/direct', postData, (data, _headers) => {
             this.logger.info('Created Direct Channel.');
             if (callback != null) { return callback(data); }
         });
@@ -578,7 +578,7 @@ class Client extends EventEmitter {
         const chunks = this._chunkMessage(postData.message);
         postData.message = chunks.shift();
 
-        return this._apiCall('POST', '/posts', postData, (data, header) => {
+        return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
             this.logger.debug('Posted message.');
 
             if ((chunks != null ? chunks.length : undefined) > 0) {
@@ -597,7 +597,7 @@ class Client extends EventEmitter {
             channel_header: header
         };
 
-        return this._apiCall('POST', this.teamRoute() + '/channels/update_header', postData, (data, header) => {
+        return this._apiCall('POST', this.teamRoute() + '/channels/update_header', postData, (_data, _headers) => {
             this.logger.debug('Channel header updated.');
             return true;
         });
