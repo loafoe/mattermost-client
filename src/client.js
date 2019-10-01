@@ -466,19 +466,19 @@ class Client extends EventEmitter {
         const postData = {
             trigger_id,
             url,
-            dialog,
+            dialog
         };
         return this._apiCall('POST', '/actions/dialogs/open', postData, (_data, _headers) => {
             this.logger.debug('Created dialog');
         });
     }
 
-    editPost(post_id, msg) {
-        let postData = msg;
-        if (typeof msg === 'string') {
+    editPost(post_id, message) {
+        let postData = message;
+        if (typeof message === 'string') {
             postData = {
                 id: post_id,
-                message: msg,
+                message
             };
         }
         return this._apiCall('PUT', `/posts/${post_id}`, postData, (_data, _headers) => {
@@ -486,11 +486,11 @@ class Client extends EventEmitter {
         });
     }
 
-    uploadFile(channel_id, file, callback) {
+    uploadFile(channel_id, files, callback) {
         const formData = {
             channel_id,
-            files: file,
-        };
+            files
+        }
 
         return this._apiCall({ method: 'POST' }, '/files', formData, (data, _headers) => {
             this.logger.debug('Posted file');
@@ -611,8 +611,9 @@ class Client extends EventEmitter {
     _apiCall(method, path, params, callback, callback_params) {
         let isForm = false;
         if (typeof method !== 'string') {
+
             isForm = true;
-            method = method.method;
+           ({ method } = method);
         }
         if (callback_params == null) { callback_params = {}; }
         let post_data = '';
