@@ -1,7 +1,7 @@
 class User {
     constructor(data) {
         if (!data) { data = {}; }
-        for (let k in data) {
+        for (const k in data) {
             this[k] = data[k];
         }
     }
