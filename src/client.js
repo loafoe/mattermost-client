@@ -444,19 +444,18 @@ class Client extends EventEmitter {
     }
 
     customMessage(postData, channelID) {
-        const preparedPostData = { ...postData };
         let chunks;
-        if (preparedPostData.message != null) {
-            chunks = this._chunkMessage(preparedPostData.message);
-            preparedPostData.message = chunks.shift();
+        if (postData.message != null) {
+            chunks = this._chunkMessage(postData.message);
+            postData.message = chunks.shift();
         }
-        preparedPostData.channel_id = channelID;
-        return this._apiCall('POST', '/posts', preparedPostData, (_data, _headers) => {
+        postData.channel_id = channelID;
+        return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
             this.logger.debug('Posted custom message.');
             if ((chunks != null ? chunks.length : undefined) > 0) {
                 this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
-                preparedPostData.message = chunks.join();
-                return this.customMessage(preparedPostData, channelID);
+                postData.message = chunks.join();
+                return this.customMessage(postData, channelID);
             }
             return true;
         });
@@ -598,16 +597,15 @@ class Client extends EventEmitter {
     // Private functions
     //
     _send(message) {
-        const preparedMessage = { ...message };
         if (!this.connected) {
             return false;
         }
         this._messageID = this._messageID + 1;
-        preparedMessage.id = this._messageID;
-        preparedMessage.seq = preparedMessage.id;
-        this._pending[preparedMessage.id] = message;
-        this.ws.send(JSON.stringify(preparedMessage));
-        return preparedMessage;
+        message.id = this._messageID;
+        message.seq = message.id;
+        this._pending[message.id] = message;
+        this.ws.send(JSON.stringify(message));
+        return message;
     }
 
 
