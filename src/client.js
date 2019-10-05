@@ -526,12 +526,12 @@ class Client extends EventEmitter {
     }
 
     findChannelByName(name) {
-        for (const channel in this.channels) {
-            if ((this.channels[channel].name === name) || (this.channels[channel].display_name === name)) {
-                return this.channels[channel];
-            }
-        }
-        return null;
+        const foundChannel = this.channels.find(channel => {
+            const channelName = this.channels[channel].name;
+            const channelDisplayName = this.channels[channel].display_name;
+            return channelName === name || channelDisplayName === name;
+        })
+        return foundChannel || null;
     }
 
     _chunkMessage(msg) {
