@@ -445,18 +445,19 @@ class Client extends EventEmitter {
     }
 
     customMessage(postData, channelID) {
+        const preparedPostData = { ...postData };
         let chunks;
-        if (postData.message != null) {
-            chunks = this._chunkMessage(postData.message);
-            postData.message = chunks.shift();
+        if (preparedPostData.message != null) {
+            chunks = this._chunkMessage(preparedPostData.message);
+            preparedPostData.message = chunks.shift();
         }
-        postData.channel_id = channelID;
-        return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
+        preparedPostData.channel_id = channelID;
+        return this._apiCall('POST', '/posts', preparedPostData, (_data, _headers) => {
             this.logger.debug('Posted custom message.');
             if ((chunks != null ? chunks.length : undefined) > 0) {
                 this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
-                postData.message = chunks.join();
-                return this.customMessage(postData, channelID);
+                preparedPostData.message = chunks.join();
+                return this.customMessage(preparedPostData, channelID);
             }
             return true;
         });
