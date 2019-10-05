@@ -1,0 +1,31 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [ '12', '10', '8' ]
+    name: Node ${{ matrix.node }}
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node }}
+    - name: install dependencies
+      run: npm install
+    - name: eslint check
+      run: npm test
+
+  build_latest:
+    runs-on: ubuntu-latest
+    container: node:current
+    steps:
+    - uses: actions/checkout@v1
+    - name: install dependencies
+      run: npm install
+    - name: eslint check
+      run: npm test
