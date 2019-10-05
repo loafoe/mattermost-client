@@ -597,14 +597,15 @@ class Client extends EventEmitter {
     // Private functions
     //
     _send(message) {
+        const preparedMessage = { ...message };
         if (!this.connected) {
             return false;
         }
-        message.id = ++this._messageID;
-        message.seq = message.id;
-        this._pending[message.id] = message;
-        this.ws.send(JSON.stringify(message));
-        return message;
+        preparedMessage.id = this._messageID + 1;
+        preparedMessage.seq = preparedMessage.id;
+        this._pending[preparedMessage.id] = message;
+        this.ws.send(JSON.stringify(preparedMessage));
+        return preparedMessage;
     }
 
 
