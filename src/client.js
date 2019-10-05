@@ -327,7 +327,7 @@ class Client extends EventEmitter {
             this.ws.close();
         }
 
-        this._connAttempts++;
+        this._connAttempts = this._connAttempts + 1;
 
         const timeout = this._connAttempts * 1000;
         this.logger.info('Reconnecting in %dms', timeout);
