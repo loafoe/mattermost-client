@@ -233,13 +233,11 @@ class Client extends EventEmitter {
         return this._apiCall('GET', uri, null, this._onLoadUser, {});
     }
 
-    loadChannels(page) {
-        if (page == null) { page = 0; }
+    loadChannels() {
         const uri = `/users/me/teams/${this.teamID}/channels`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onChannels);
     }
-
 
     connect() {
         if (this._connecting) { return; }
