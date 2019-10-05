@@ -22,6 +22,7 @@ module.exports = {
       'no-unused-vars': 'off',
       'linebreak-style': 'off',
       'arrow-parens': 'off',
-      'consistent-return': 'off'
+      'consistent-return': 'off',
+      'class-methods-use-this': 'off'
   },
 };
