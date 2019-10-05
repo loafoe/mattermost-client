@@ -608,18 +608,18 @@ class Client extends EventEmitter {
     }
 
 
-    _apiCall(method, path, params, callback, callback_params) {
+    _apiCall(method, path, params, callback, callback_params = {}) {
         let isForm = false;
+        let safeMethod = method;
         if (typeof method !== 'string') {
             isForm = true;
-            method = method.method;
+            safeMethod = method.method;
         }
-        if (callback_params == null) { callback_params = {}; }
         let post_data = '';
         if (params != null) { post_data = JSON.stringify(params); }
         const options = {
             uri: (useTLS ? 'https://' : 'http://') + this.host + ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '') + apiPrefix + path,
-            method,
+            safeMethod,
             json: params,
             rejectUnauthorized: tlsverify,
             headers: {
@@ -639,7 +639,7 @@ class Client extends EventEmitter {
             options.formData = params;
         }
 
-        this.logger.debug(`${method} ${path}`);
+        this.logger.debug(`${safeMethod} ${path}`);
         this.logger.info(`api url:${options.uri}`);
 
         return request(options, (error, res, value) => {
@@ -649,10 +649,11 @@ class Client extends EventEmitter {
                 }
             } else if (callback) {
                 if ((res.statusCode === 200) || (res.statusCode === 201)) {
-                    if (typeof value === 'string') {
-                        value = JSON.parse(value);
-                    }
-                    return callback(value, res.headers, callback_params);
+                    const safeValue = typeof value === 'string'
+                        ? JSON.parse(value)
+                        : value;
+
+                    return callback(safeValue, res.headers, callback_params);
                 }
                 return callback({ id: null, error: `API response: ${res.statusCode} ${JSON.stringify(value)}` }, res.headers, callback_params);
             }
