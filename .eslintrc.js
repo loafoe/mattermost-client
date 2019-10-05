@@ -19,6 +19,9 @@ module.exports = {
       'indent': [2, 4],
       'no-underscore-dangle': 'off',
       'camelcase': 'off',
-      'no-unused-vars': 'off'
+      'no-unused-vars': 'off',
+      'linebreak-style': 'off',
+      'arrow-parens': 'off',
+      'consistent-return': 'off'
   },
 };
