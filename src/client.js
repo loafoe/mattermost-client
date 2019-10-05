@@ -105,7 +105,8 @@ class Client extends EventEmitter {
                 this.token = headers.token;
             }
             // TODO: split into multiple lines
-            this.socketUrl = `${(useTLS ? 'wss://' : 'ws://') + this.host + ((useTLS && (this.options.wssPort != null)) ? `:${this.options.wssPort}` : ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '')) + apiPrefix}/websocket`;
+
+            this.socketUrl = this._getSocketUrl();
             this.logger.info(`Websocket URL: ${this.socketUrl}`);
             this.self = new User(data);
             this.emit('loggedIn', this.self);
@@ -116,6 +117,13 @@ class Client extends EventEmitter {
         this.emit('error', data);
         this.authenticated = false;
         return this.reconnect();
+    }
+
+    _getSocketUrl() {
+        const protocol = useTLS ? 'wss://' : 'ws://';
+        const httpPort = this.options.httpPort ? `:${this.options.httpPort}` : '';
+        const wssPort = useTLS && this.options.wssPort ? `:${this.options.wssPort}` : httpPort;
+        return `${protocol + this.host + wssPort + apiPrefix}/websocket`;
     }
 
     _onLoadUsers(data, _headers, params) {
