@@ -598,7 +598,8 @@ class Client extends EventEmitter {
         if (!this.connected) {
             return false;
         }
-        preparedMessage.id = this._messageID + 1;
+        this._messageID = this._messageID + 1;
+        preparedMessage.id = this._messageID;
         preparedMessage.seq = preparedMessage.id;
         this._pending[preparedMessage.id] = message;
         this.ws.send(JSON.stringify(preparedMessage));
