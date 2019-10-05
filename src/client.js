@@ -38,6 +38,7 @@ class Client extends EventEmitter {
         this.ws = null;
         this._messageID = 0;
         this._pending = {};
+        this.messageMaxRunes = messageMaxRunes;
 
         this._pingInterval = (this.options.pingInterval != null)
             ? this.options.pingInterval
@@ -128,16 +129,15 @@ class Client extends EventEmitter {
 
     _onLoadUsers(data, _headers, params) {
         if (data && !data.error) {
-            data.forEach(user => { this.users[user.id] = user; });
+            data.forEach((user) => { this.users[user.id] = user; });
             this.logger.info(`Found ${Object.keys(data).length} profiles.`);
             this.emit('profilesLoaded', data);
-            if ((Object.keys(data).length > 0) && (params.page != null)) {
+            if ((Object.keys(data).length) && (params.page != null)) {
                 return this.loadUsers(params.page + 1); // Trigger next page loading
             }
-        } else {
-            this.logger.error('Failed to load profiles from server.');
-            return this.emit('error', { msg: 'failed to load profiles' });
         }
+        this.logger.error('Failed to load profiles from server.');
+        return this.emit('error', { msg: 'failed to load profiles' });
     }
 
     _onLoadUser(data, _headers, _params) {
@@ -145,11 +145,13 @@ class Client extends EventEmitter {
             this.users[data.id] = data;
             return this.emit('profilesLoaded', [data]);
         }
+        this.logger.error('Failed to load profiles from server.');
+        return this.emit('error', { msg: 'failed to load profiles' });
     }
 
     _onChannels(data, _headers, _params) {
         if (data && !data.error) {
-            data.forEach(channel => { this.channels[channel.id] = channel; });
+            data.forEach((channel) => { this.channels[channel.id] = channel; });
             this.logger.info(`Found ${Object.keys(data).length} subscribed channels.`);
             return this.emit('channelsLoaded', data);
         }
@@ -183,7 +185,7 @@ class Client extends EventEmitter {
             this.emit('teamsLoaded', data);
             this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
             this.teamID = Object.keys(this.teams)
-                .find(team => {
+                .find((team) => {
                     const isTeamFound = team.name.toLowerCase() === this.group.toLowerCase();
                     this.logger.debug(`Testing ${team.name} == ${this.group}`);
                     if (isTeamFound) {
@@ -234,7 +236,7 @@ class Client extends EventEmitter {
     loadUser(user_id) {
         const uri = `/users/${user_id}`;
         this.logger.info(`Loading ${uri}`);
-        return this._apiCall('GET', uri, null, this._onLoadUser, {});
+        return this._apiCall('GET', uri, null, this._onLoadUser);
     }
 
     loadChannels() {
@@ -283,8 +285,7 @@ class Client extends EventEmitter {
             this._pongTimeout = setInterval(() => {
                 if (!this.connected) {
                     this.logger.error('Not connected in pongTimeout');
-                    this.reconnect();
-                    return;
+                    return this.reconnect();
                 }
                 if (this._lastPong && (Date.now() - this._lastPong) > (2 * this._pingInterval)) {
                     this.logger.error('Last pong is too old: %d', (Date.now() - this._lastPong) / 1000);
@@ -309,8 +310,8 @@ class Client extends EventEmitter {
             if (this.autoReconnect) {
                 return this.reconnect();
             }
+            return true;
         });
-        return true;
     }
 
     reconnect() {
@@ -415,7 +416,7 @@ class Client extends EventEmitter {
     }
 
     getUserByEmail(email) {
-        return this.users.find(user => user.email === email);
+        return this.users.find((user) => user.email === email);
     }
 
     getUserDirectMessageChannel(userID, callback) {
@@ -432,7 +433,7 @@ class Client extends EventEmitter {
             if (callback != null) { callback(channel); }
             return;
         }
-        return this.createDirectChannel(userID, callback);
+        this.createDirectChannel(userID, callback);
     }
 
     getAllChannels() {
@@ -445,17 +446,18 @@ class Client extends EventEmitter {
 
     customMessage(postData, channelID) {
         let chunks;
-        if (postData.message != null) {
-            chunks = this._chunkMessage(postData.message);
-            postData.message = chunks.shift();
+        const postDataObj = postData;
+        if (postDataObj.message != null) {
+            chunks = this._chunkMessage(postDataObj.message);
+            postDataObj.message = chunks.shift();
         }
-        postData.channel_id = channelID;
-        return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
+        postDataObj.channel_id = channelID;
+        return this._apiCall('POST', '/posts', postDataObj, (_data, _headers) => {
             this.logger.debug('Posted custom message.');
             if ((chunks != null ? chunks.length : undefined) > 0) {
                 this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
-                postData.message = chunks.join();
-                return this.customMessage(postData, channelID);
+                postDataObj.message = chunks.join();
+                return this.customMessage(postDataObj, channelID);
             }
             return true;
         });
@@ -521,12 +523,13 @@ class Client extends EventEmitter {
         return this._apiCall('POST', '/channels/direct', postData, (data, _headers) => {
             this.logger.info('Created Direct Channel.');
             if (callback != null) { return callback(data); }
+            return data;
         });
     }
 
     findChannelByName(name) {
         const foundChannel = Object.keys(this.channels)
-            .find(channel => {
+            .find((channel) => {
                 const channelName = this.channels[channel].name;
                 const channelDisplayName = this.channels[channel].display_name;
                 return channelName === name || channelDisplayName === name;
@@ -538,7 +541,7 @@ class Client extends EventEmitter {
         if (!msg) {
             return [''];
         }
-        const message_limit = messageMaxRunes;
+        const message_limit = this.messageMaxRunes;
         let chunks = [];
         chunks = msg.match(new RegExp(`(.|[\r\n]){1,${message_limit}}`, 'g'));
         return chunks;
@@ -597,30 +600,31 @@ class Client extends EventEmitter {
     // Private functions
     //
     _send(message) {
+        const messageObj = message;
         if (!this.connected) {
             return false;
         }
         this._messageID = this._messageID + 1;
-        message.id = this._messageID;
-        message.seq = message.id;
-        this._pending[message.id] = message;
-        this.ws.send(JSON.stringify(message));
-        return message;
+        messageObj.id = this._messageID;
+        messageObj.seq = message.id;
+        this._pending[messageObj.id] = messageObj;
+        this.ws.send(JSON.stringify(messageObj));
+        return messageObj;
     }
 
 
     _apiCall(method, path, params, callback, callback_params = {}) {
         let isForm = false;
-        let safeMethod = method;
-        if (typeof method !== 'string') {
+        let httpMethod = method;
+        if (typeof httpMethod !== 'string') {
             isForm = true;
-            safeMethod = method.method;
+            httpMethod = httpMethod.method;
         }
         let post_data = '';
         if (params != null) { post_data = JSON.stringify(params); }
         const options = {
             uri: (useTLS ? 'https://' : 'http://') + this.host + ((this.options.httpPort != null) ? `:${this.options.httpPort}` : '') + apiPrefix + path,
-            safeMethod,
+            method: httpMethod,
             json: params,
             rejectUnauthorized: tlsverify,
             headers: {
@@ -640,7 +644,7 @@ class Client extends EventEmitter {
             options.formData = params;
         }
 
-        this.logger.debug(`${safeMethod} ${path}`);
+        this.logger.debug(`${method} ${path}`);
         this.logger.info(`api url:${options.uri}`);
 
         return request(options, (error, res, value) => {
@@ -648,7 +652,9 @@ class Client extends EventEmitter {
                 if (callback) {
                     return callback({ id: null, error: error.errno }, {}, callback_params);
                 }
-            } else if (callback) {
+                return false;
+            }
+            if (callback) {
                 if ((res.statusCode === 200) || (res.statusCode === 201)) {
                     const safeValue = typeof value === 'string'
                         ? JSON.parse(value)
@@ -658,6 +664,7 @@ class Client extends EventEmitter {
                 }
                 return callback({ id: null, error: `API response: ${res.statusCode} ${JSON.stringify(value)}` }, res.headers, callback_params);
             }
+            return true;
         });
     }
 }

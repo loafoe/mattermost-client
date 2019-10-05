@@ -1,10 +1,8 @@
 class User {
     constructor(data = {}) {
-        const initUserData = key => {
+        Object.keys(data).forEach((key) => {
             this[key] = key;
-        };
-
-        Object.keys(data).forEach(initUserData);
+        });
     }
 }
 

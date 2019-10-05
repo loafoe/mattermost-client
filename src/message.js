@@ -1,10 +1,8 @@
 class Message {
     constructor(data = {}) {
-        const initMessageData = key => {
+        Object.keys(data).forEach((key) => {
             this[key] = key;
-        };
-
-        Object.keys(data).forEach(initMessageData);
+        });
     }
 }
 
