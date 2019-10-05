@@ -2,7 +2,7 @@
   "name": "mattermost-client",
   "version": "6.1.2",
   "description": "Mattermost client",
-  "main": "./src/client",
+  "main": "./src/client.js",
   "scripts": {
     "test": "eslint ."
   },
