@@ -278,13 +278,13 @@ class Client extends EventEmitter {
             this.logger.info('Sending challenge...');
             this._send(challenge);
             this.logger.info('Starting pinger...');
-            return this._pongTimeout = setInterval(() => {
+            this._pongTimeout = setInterval(() => {
                 if (!this.connected) {
                     this.logger.error('Not connected in pongTimeout');
                     this.reconnect();
                     return;
                 }
-                if ((this._lastPong != null) && ((Date.now() - this._lastPong) > (2 * this._pingInterval))) {
+                if (this._lastPong && (Date.now() - this._lastPong) > (2 * this._pingInterval)) {
                     this.logger.error('Last pong is too old: %d', (Date.now() - this._lastPong) / 1000);
                     this.authenticated = false;
                     this.connected = false;
@@ -294,6 +294,7 @@ class Client extends EventEmitter {
                 return this._send({ action: 'ping' });
             },
             this._pingInterval);
+            return this._pongTimeout;
         });
 
         this.ws.on('message', (data, _flags) => this.onMessage(JSON.parse(data)));
