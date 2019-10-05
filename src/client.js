@@ -178,14 +178,15 @@ class Client extends EventEmitter {
             this.teams = data;
             this.emit('teamsLoaded', data);
             this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
-            for (const team of this.teams) {
-                this.logger.debug(`Testing ${team.name} == ${this.group}`);
-                if (team.name.toLowerCase() === this.group.toLowerCase()) {
-                    this.logger.info(`Found team! ${team.id}`);
-                    this.teamID = team.id;
-                    break;
-                }
-            }
+            this.teamID = Object.keys(this.teams)
+                .find(team => {
+                    const isTeamFound = team.name.toLowerCase() === this.group.toLowerCase();
+                    this.logger.debug(`Testing ${team.name} == ${this.group}`);
+                    if (isTeamFound) {
+                        this.logger.info(`Found team! ${team.id}`);
+                    }
+                    return isTeamFound && team.id;
+                });
             this.loadUsers();
             this.loadChannels();
             return this.connect(); // FIXME
