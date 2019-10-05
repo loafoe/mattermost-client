@@ -526,11 +526,12 @@ class Client extends EventEmitter {
     }
 
     findChannelByName(name) {
-        const foundChannel = this.channels.find(channel => {
-            const channelName = this.channels[channel].name;
-            const channelDisplayName = this.channels[channel].display_name;
-            return channelName === name || channelDisplayName === name;
-        });
+        const foundChannel = Object.keys(this.channels)
+            .find(channel => {
+                const channelName = this.channels[channel].name;
+                const channelDisplayName = this.channels[channel].display_name;
+                return channelName === name || channelDisplayName === name;
+            });
         return foundChannel || null;
     }
 
