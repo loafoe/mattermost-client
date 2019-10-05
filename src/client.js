@@ -573,9 +573,9 @@ class Client extends EventEmitter {
             this.logger.debug('Posted message.');
 
             if ((chunks != null ? chunks.length : undefined) > 0) {
-                msg = chunks.join();
+                const message = chunks.join();
                 this.logger.debug(`Recursively posting remainder of message: (${(chunks != null ? chunks.length : undefined)})`);
-                return this.postMessage(msg, channelID);
+                return this.postMessage(message, channelID);
             }
 
             return true;
