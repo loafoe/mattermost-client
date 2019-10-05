@@ -412,11 +412,7 @@ class Client extends EventEmitter {
     }
 
     getUserByEmail(email) {
-        for (const user in this.users) {
-            if (this.users[user].email === email) {
-                return this.users[user];
-            }
-        }
+        return this.users.find(user => user.email === email);
     }
 
     getUserDirectMessageChannel(userID, callback) {
