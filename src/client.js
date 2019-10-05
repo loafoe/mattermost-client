@@ -220,8 +220,7 @@ class Client extends EventEmitter {
         return this._apiCall('GET', uri, null, this._onTeams);
     }
 
-    loadUsers(page) {
-        if (page == null) { page = 0; }
+    loadUsers(page = 0) {
         const uri = `/users?page=${page}&per_page=200&in_team=${this.teamID}`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
