@@ -120,9 +120,7 @@ class Client extends EventEmitter {
 
     _onLoadUsers(data, _headers, params) {
         if (data && !data.error) {
-            for (const user of data) {
-                this.users[user.id] = user;
-            }
+            data.forEach(user => { this.users[user.id] = user; });
             this.logger.info(`Found ${Object.keys(data).length} profiles.`);
             this.emit('profilesLoaded', data);
             if ((Object.keys(data).length > 0) && (params.page != null)) {
