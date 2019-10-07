@@ -1,5 +1,7 @@
 # Mattermost-client
 
+[![Build Status](https://github.com/loafoe/mattermost-client/workflows/CI/badge.svg)](https://github.com/loafoe/mattermost-client/actions?workflow=CI)
+
 Mattermost client which uses the Web API and websockets
 
 # Features
