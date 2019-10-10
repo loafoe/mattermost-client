@@ -21,6 +21,7 @@ jobs:
       run: npm test
 
   build_latest:
+    name: Node latest
     runs-on: ubuntu-latest
     container: node:current
     steps:
