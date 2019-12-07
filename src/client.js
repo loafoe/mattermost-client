@@ -227,6 +227,13 @@ class Client extends EventEmitter {
         return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
     }
 
+    loadAllUsers(page) {
+        if (page == null) { page = 0; }
+        const uri = `/users?page=${page}&per_page=200`;
+        this.logger.info(`Loading ${uri}`);
+        return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
+    }
+
     loadUser(user_id) {
         const uri = `/users/${user_id}`;
         this.logger.info(`Loading ${uri}`);
