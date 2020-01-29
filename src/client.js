@@ -581,15 +581,13 @@ class Client extends EventEmitter {
             return true;
         });
     }
-    
-    //post a slash command to a spezific channel    
-    postCommand(channelID, cmd){
+
+    // post a slash command to a spezific channel
+    postCommand(channelID, cmd) {
         const postData = {
             command: cmd,
             channel_id: channelID
         };
-        
-
         return this._apiCall('POST', '/commands/execute', postData, (data, header) => {
             this.logger.debug('Run command.');
             return true;
