@@ -23,38 +23,38 @@ class Client extends EventEmitter {
         this.host = host;
         this.group = group;
         this.options = options || { wssPort: 443, httpPort: 80 };
-
+        
         this.authenticated = false;
         this.connected = false;
         this.personalAccessToken = false;
         this.token = null;
-
+        
         this.self = null;
         this.channels = {};
         this.users = {};
         this.teams = {};
         this.teamID = null;
-
+        
         this.ws = null;
         this._messageID = 0;
         this._pending = {};
-
+        
         this._pingInterval = (this.options.pingInterval != null)
             ? this.options.pingInterval
-            : defaultPingInterval;
-
+        : defaultPingInterval;
+        
         this.autoReconnect = (this.options.autoReconnect != null)
             ? this.options.autoReconnect
-            : true;
-
+        : true;
+        
         this.httpProxy = (this.options.httpProxy != null) ? this.options.httpProxy : false;
         this._connecting = false;
         this._reconnecting = false;
-
+        
         this._connAttempts = 0;
-
+        
         this.logger = new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
-
+        
         // Binding because async calls galore
         this._onLogin = this._onLogin.bind(this);
         this._onLoadUsers = this._onLoadUsers.bind(this);
@@ -64,7 +64,7 @@ class Client extends EventEmitter {
         this._onMe = this._onMe.bind(this);
         this._onTeams = this._onTeams.bind(this);
     }
-
+    
     login(email, password, mfaToken) {
         this.personalAccessToken = false;
         this.email = email;
@@ -82,7 +82,7 @@ class Client extends EventEmitter {
             this._onLogin,
         );
     }
-
+    
     tokenLogin(token) {
         this.token = token;
         this.personalAccessToken = true;
@@ -90,7 +90,7 @@ class Client extends EventEmitter {
         const uri = `${usersRoute}/me`;
         return this._apiCall('GET', uri, null, this._onLogin);
     }
-
+    
     _onLogin(data, headers) {
         if (data) {
             if (!data.id) {
@@ -117,7 +117,7 @@ class Client extends EventEmitter {
         this.authenticated = false;
         return this.reconnect();
     }
-
+    
     _onLoadUsers(data, _headers, params) {
         if (data && !data.error) {
             for (const user of data) {
@@ -133,14 +133,14 @@ class Client extends EventEmitter {
             return this.emit('error', { msg: 'failed to load profiles' });
         }
     }
-
+    
     _onLoadUser(data, _headers, _params) {
         if (data && !data.error) {
             this.users[data.id] = data;
             return this.emit('profilesLoaded', [data]);
         }
     }
-
+    
     _onChannels(data, _headers, _params) {
         if (data && !data.error) {
             for (const channel of data) {
@@ -152,7 +152,7 @@ class Client extends EventEmitter {
         this.logger.error(`Failed to get subscribed channels list from server: ${data.error}`);
         return this.emit('error', { msg: 'failed to get channel list' });
     }
-
+    
     _onPreferences(data, _headers, _params) {
         if (data && !data.error) {
             this.preferences = data;
@@ -162,7 +162,7 @@ class Client extends EventEmitter {
         this.logger.error(`Failed to load Preferences...${data.error}`);
         return this.reconnect();
     }
-
+    
     _onMe(data, _headers, _params) {
         if (data && !data.error) {
             this.me = data;
@@ -172,7 +172,7 @@ class Client extends EventEmitter {
         this.logger.error(`Failed to load Me...${data.error}`);
         return this.reconnect();
     }
-
+    
     _onTeams(data, _headers, _params) {
         if (data && !data.error) {
             this.teams = data;
@@ -193,75 +193,75 @@ class Client extends EventEmitter {
         this.logger.error('Failed to load Teams...');
         return this.reconnect();
     }
-
+    
     channelRoute(channelId) {
         return `${this.teamRoute()}/channels/${channelId}`;
     }
-
+    
     teamRoute() {
         return `${usersRoute}/me/teams/${this.teamID}`;
     }
-
+    
     getMe() {
         const uri = `${usersRoute}/me`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onMe);
     }
-
+    
     getPreferences() {
         const uri = `${usersRoute}/me/preferences`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onPreferences);
     }
-
+    
     getTeams() {
         const uri = `${usersRoute}/me/teams`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onTeams);
     }
-
+    
     loadUsers(page) {
         if (page == null) { page = 0; }
         const uri = `/users?page=${page}&per_page=200&in_team=${this.teamID}`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
     }
-
+    
     loadUser(user_id) {
         const uri = `/users/${user_id}`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onLoadUser, {});
     }
-
+    
     loadChannels(page) {
         if (page == null) { page = 0; }
         const uri = `/users/me/teams/${this.teamID}/channels`;
         this.logger.info(`Loading ${uri}`);
         return this._apiCall('GET', uri, null, this._onChannels);
     }
-
-
+    
+    
     connect() {
         if (this._connecting) { return; }
-
+        
         this._connecting = true;
         this.logger.info('Connecting...');
         const options = { rejectUnauthorized: tlsverify };
-
+        
         if (this.httpProxy) { options.agent = new HttpsProxyAgent(this.httpProxy); }
-
+        
         // Set up websocket connection to server
         if (this.ws) {
             this.ws.close();
             this.ws = null;
         }
         this.ws = new WebSocket(this.socketUrl, options);
-
+        
         this.ws.on('error', (error) => {
             this._connecting = false;
             return this.emit('error', error);
         });
-
+        
         this.ws.on('open', () => {
             this._connecting = false;
             this._reconnecting = false;
@@ -293,11 +293,11 @@ class Client extends EventEmitter {
                 this.logger.info('ping');
                 return this._send({ action: 'ping' });
             },
-            this._pingInterval);
+                                                   this._pingInterval);
         });
-
+        
         this.ws.on('message', (data, _flags) => this.onMessage(JSON.parse(data)));
-
+        
         this.ws.on('close', (code, message) => {
             this.emit('close', code, message);
             this._connecting = false;
@@ -309,26 +309,26 @@ class Client extends EventEmitter {
         });
         return true;
     }
-
+    
     reconnect() {
         if (this._reconnecting) {
             this.logger.info('WARNING: Already reconnecting.');
         }
         this._connecting = false;
         this._reconnecting = true;
-
+        
         if (this._pongTimeout) {
             clearInterval(this._pongTimeout);
             this._pongTimeout = null;
         }
         this.authenticated = false;
-
+        
         if (this.ws) {
             this.ws.close();
         }
-
+        
         this._connAttempts++;
-
+        
         const timeout = this._connAttempts * 1000;
         this.logger.info('Reconnecting in %dms', timeout);
         return setTimeout(
@@ -342,8 +342,8 @@ class Client extends EventEmitter {
             timeout,
         );
     }
-
-
+    
+    
     disconnect() {
         if (!this.connected) {
             return false;
@@ -356,61 +356,61 @@ class Client extends EventEmitter {
         this.ws.close();
         return true;
     }
-
+    
     onMessage(message) {
         this.emit('raw_message', message);
         const m = new Message(message);
         switch (message.event) {
-        case 'ping':
-            // Deprecated
-            this.logger.info('ACK ping');
-            this._lastPong = Date.now();
-            return this.emit('ping', message);
-        case 'posted':
-            return this.emit('message', m);
-        case 'added_to_team':
-        case 'authentication_challenge':
-        case 'channel_converted':
-        case 'channel_created':
-        case 'channel_deleted':
-        case 'channel_member_updated':
-        case 'channel_updated':
-        case 'channel_viewed':
-        case 'config_changed':
-        case 'delete_team':
-        case 'ephemeral_message':
-        case 'hello':
-        case 'typing':
-        case 'post_edit':
-        case 'post_deleted':
-        case 'preference_changed':
-        case 'user_added':
-        case 'user_removed':
-        case 'user_role_updated':
-        case 'user_updated':
-        case 'status_change':
-        case 'webrtc':
-            // Generic handler
-            return this.emit(message.event, message);
-        case 'new_user':
-            this.loadUser(message.data.user_id);
-            return this.emit('new_user', message);
-        default:
-            // Check for `pong` response
-            if ((message.data ? message.data.text : undefined) && (message.data.text === 'pong')) {
-                this.logger.info('ACK ping (2)');
+            case 'ping':
+                // Deprecated
+                this.logger.info('ACK ping');
                 this._lastPong = Date.now();
                 return this.emit('ping', message);
-            }
-            this.logger.debug('Received unhandled message:');
-            return this.logger.debug(message);
+            case 'posted':
+                return this.emit('message', m);
+            case 'added_to_team':
+            case 'authentication_challenge':
+            case 'channel_converted':
+            case 'channel_created':
+            case 'channel_deleted':
+            case 'channel_member_updated':
+            case 'channel_updated':
+            case 'channel_viewed':
+            case 'config_changed':
+            case 'delete_team':
+            case 'ephemeral_message':
+            case 'hello':
+            case 'typing':
+            case 'post_edit':
+            case 'post_deleted':
+            case 'preference_changed':
+            case 'user_added':
+            case 'user_removed':
+            case 'user_role_updated':
+            case 'user_updated':
+            case 'status_change':
+            case 'webrtc':
+                // Generic handler
+                return this.emit(message.event, message);
+            case 'new_user':
+                this.loadUser(message.data.user_id);
+                return this.emit('new_user', message);
+            default:
+                // Check for `pong` response
+                if ((message.data ? message.data.text : undefined) && (message.data.text === 'pong')) {
+                    this.logger.info('ACK ping (2)');
+                    this._lastPong = Date.now();
+                    return this.emit('ping', message);
+                }
+                this.logger.debug('Received unhandled message:');
+                return this.logger.debug(message);
         }
     }
-
+    
     getUserByID(id) {
         return this.users[id];
     }
-
+    
     getUserByEmail(email) {
         for (const user in this.users) {
             if (this.users[user].email === email) {
@@ -418,7 +418,7 @@ class Client extends EventEmitter {
             }
         }
     }
-
+    
     getUserDirectMessageChannel(userID, callback) {
         // check if channel already exists
         let channel = `${this.self.id}__${userID}`;
@@ -435,15 +435,15 @@ class Client extends EventEmitter {
         }
         return this.createDirectChannel(userID, callback);
     }
-
+    
     getAllChannels() {
         return this.channels;
     }
-
+    
     getChannelByID(id) {
         return this.channels[id];
     }
-
+    
     customMessage(postData, channelID) {
         let chunks;
         if (postData.message != null) {
@@ -461,7 +461,7 @@ class Client extends EventEmitter {
             return true;
         });
     }
-
+    
     dialog(trigger_id, url, dialog) {
         const postData = {
             trigger_id,
@@ -472,7 +472,7 @@ class Client extends EventEmitter {
             this.logger.debug('Created dialog');
         });
     }
-
+    
     editPost(post_id, msg) {
         let postData = msg;
         if (typeof msg === 'string') {
@@ -485,19 +485,18 @@ class Client extends EventEmitter {
             this.logger.debug('Edited post');
         });
     }
-
+    
     uploadFile(channel_id, file, callback) {
         const formData = {
             channel_id,
             files: file,
         };
-
         return this._apiCall({ method: 'POST' }, '/files', formData, (data, _headers) => {
             this.logger.debug('Posted file');
             return callback(data);
         });
     }
-
+    
     react(messageID, emoji) {
         const postData = {
             user_id: this.self.id,
@@ -509,14 +508,14 @@ class Client extends EventEmitter {
             this.logger.debug('Created reaction');
         });
     }
-
+    
     unreact(messageID, emoji) {
         const uri = `/users/me/posts/${messageID}/reactions/${emoji}`;
         return this._apiCall('DELETE', uri, [], (_data, _headers) => {
             this.logger.debug('Deleted reaction');
         });
     }
-
+    
     createDirectChannel(userID, callback) {
         const postData = [userID, this.self.id];
         return this._apiCall('POST', '/channels/direct', postData, (data, _headers) => {
@@ -524,7 +523,7 @@ class Client extends EventEmitter {
             if (callback != null) { return callback(data); }
         });
     }
-
+    
     findChannelByName(name) {
         for (const channel in this.channels) {
             if ((this.channels[channel].name === name) || (this.channels[channel].display_name === name)) {
@@ -533,7 +532,7 @@ class Client extends EventEmitter {
         }
         return null;
     }
-
+    
     _chunkMessage(msg) {
         if (!msg) {
             return [''];
@@ -543,7 +542,7 @@ class Client extends EventEmitter {
         chunks = msg.match(new RegExp(`(.|[\r\n]){1,${message_limit}}`, 'g'));
         return chunks;
     }
-
+    
     postMessage(msg, channelID) {
         const postData = {
             message: msg,
@@ -552,7 +551,7 @@ class Client extends EventEmitter {
             user_id: this.self.id,
             channel_id: channelID,
         };
-
+        
         if (typeof msg === 'string') {
             postData.message = msg;
         } else {
@@ -564,24 +563,23 @@ class Client extends EventEmitter {
                 postData.file_ids = msg.file_ids;
             }
         }
-
+        
         // break apart long messages
         const chunks = this._chunkMessage(postData.message);
         postData.message = chunks.shift();
-
         return this._apiCall('POST', '/posts', postData, (_data, _headers) => {
             this.logger.debug('Posted message.');
-
+            
             if ((chunks != null ? chunks.length : undefined) > 0) {
                 msg = chunks.join();
                 this.logger.debug(`Recursively posting remainder of message: (${(chunks != null ? chunks.length : undefined)})`);
                 return this.postMessage(msg, channelID);
             }
-
+            
             return true;
         });
     }
-
+    
     // post a slash command to a spezific channel
     postCommand(channelID, cmd) {
         const postData = {
@@ -593,19 +591,19 @@ class Client extends EventEmitter {
             return true;
         });
     }
-
+    
     setChannelHeader(channelID, header) {
         const postData = {
             channel_id: channelID,
             channel_header: header,
         };
-
+        
         return this._apiCall('POST', `${this.teamRoute()}/channels/update_header`, postData, (_data, _headers) => {
             this.logger.debug('Channel header updated.');
             return true;
         });
     }
-
+    
     // Private functions
     //
     _send(message) {
@@ -618,8 +616,8 @@ class Client extends EventEmitter {
         this.ws.send(JSON.stringify(message));
         return message;
     }
-
-
+    
+    
     _apiCall(method, path, params, callback, callback_params) {
         let isForm = false;
         if (typeof method !== 'string') {
@@ -640,20 +638,20 @@ class Client extends EventEmitter {
                 'X-Requested-With': 'XMLHttpRequest',
             },
         };
-
+        
         if (this.token) { options.headers.Authorization = `BEARER ${this.token}`; }
         if (this.httpProxy) { options.proxy = this.httpProxy; }
-
+        
         if (isForm) {
             options.headers['Content-Type'] = 'multipart/form-data';
             delete options.headers['Content-Length'];
             delete options.json;
             options.formData = params;
         }
-
+        
         this.logger.debug(`${method} ${path}`);
         this.logger.info(`api url:${options.uri}`);
-
+        
         return request(options, (error, res, value) => {
             if (error) {
                 if (callback) {
