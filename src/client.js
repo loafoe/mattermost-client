@@ -313,6 +313,7 @@ class Client extends EventEmitter {
     reconnect() {
         if (this._reconnecting) {
             this.logger.info('WARNING: Already reconnecting.');
+            return false;
         }
         this._connecting = false;
         this._reconnecting = true;
