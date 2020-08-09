@@ -45,15 +45,18 @@ describe('Mattermost login ...', () => {
         }, expect.anything());
     });
 
-    describe('_onLogin', () => {
-        beforeEach(() => {
-            Client.prototype.emit = jest.fn();
-            Client.prototype.getMe = jest.fn();
-            Client.prototype.getPreferences = jest.fn();
-            Client.prototype.getTeams = jest.fn();
-            Client.prototype.reconnect = jest.fn();
-        });
+});
 
+describe('Client callbacks', () => {
+    beforeEach(() => {
+        Client.prototype.emit = jest.fn();
+        Client.prototype.getMe = jest.fn();
+        Client.prototype.getPreferences = jest.fn();
+        Client.prototype.getTeams = jest.fn();
+        Client.prototype.reconnect = jest.fn();
+    });
+
+    describe('_onLogin', () => {
         test('should reconnect when bad data', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLogin({}, {});
@@ -82,6 +85,52 @@ describe('Mattermost login ...', () => {
             expect(tested.socketUrl).toEqual(`wss://${SERVER_URL}/api/v4/websocket`);
             expect(tested.self).toEqual({ id: 'obiwan' });
             expect(tested.authenticated).toBeTruthy();
+        });
+    });
+
+    describe('_onLoadUser(s)', () => {
+        const PRELOADED_USERS = { "obiwan": { "id": "obiwan" }, "yoda": { "id": "yoda" } };
+        test('should failed on bad data', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onLoadUsers(null, null, null);
+            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
+        });
+
+        test('should load users', () => {
+            Client.prototype.loadUsers = jest.fn();
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: null });
+            expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
+            expect(tested.users).toEqual({ "obiwan": { "id": "obiwan" }, "yoda": { "id": "yoda" } });
+            expect(Client.prototype.loadUsers).not.toHaveBeenCalled();
+        });
+
+        test('should load multipage users', () => {
+            Client.prototype.loadUsers = jest.fn();
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: 1 });
+            expect(Client.prototype.loadUsers).toHaveBeenCalledWith(2);
+        });
+
+        test('should load user', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested.users = PRELOADED_USERS;
+            tested._onLoadUser({ id: 'luke' }, null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
+            expect(tested.users).toEqual(expect.objectContaining({
+                ...PRELOADED_USERS,
+                "luke": { "id": "luke" }
+            }));
+        });
+
+        test('should fail load user', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested.users = PRELOADED_USERS;
+            tested._onLoadUser({ error: 'No jedi available' }, null, null);
+
+            expect(Client.prototype.emit).not.toHaveBeenCalled();
+            expect(tested.users).toEqual(PRELOADED_USERS);
         });
     });
 });
