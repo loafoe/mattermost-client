@@ -151,4 +151,27 @@ describe('Client callbacks', () => {
             expect(tested.channels).toEqual(SAMPLE_CHANNELS);
         });
     });
+
+    describe('_onPreferences', () => {
+        const SAMPLE_PREFERENCES = {
+            "user_id": "obiwan",
+            "category": "user",
+            "name": "Obiwan",
+            "value": "Kenobi"
+        };
+        test('should fail receive channels', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onPreferences({ error: 'error' }, null, null);
+
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+        });
+
+        test('should fail receive channels', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onPreferences(SAMPLE_PREFERENCES, null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('preferencesLoaded', expect.anything());
+            expect(tested.preferences).toEqual(SAMPLE_PREFERENCES);
+        });
+    });
 });
