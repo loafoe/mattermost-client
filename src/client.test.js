@@ -54,6 +54,9 @@ describe('Client callbacks', () => {
         Client.prototype.getPreferences = jest.fn();
         Client.prototype.getTeams = jest.fn();
         Client.prototype.reconnect = jest.fn();
+        Client.prototype.loadUsers = jest.fn();
+        Client.prototype.loadChannels = jest.fn();
+        Client.prototype.connect = jest.fn();
     });
 
     describe('_onLogin', () => {
@@ -143,7 +146,7 @@ describe('Client callbacks', () => {
             expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({msg: expect.anything()}));
         });
 
-        test('should fail receive channels', () => {
+        test('should receive channels', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onChannels([{id: 'jedi'}, {id: 'sith'}], null, null);
 
@@ -159,19 +162,72 @@ describe('Client callbacks', () => {
             "name": "Obiwan",
             "value": "Kenobi"
         };
-        test('should fail receive channels', () => {
+        test('should fail receive preferences', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onPreferences({ error: 'error' }, null, null);
 
             expect(Client.prototype.reconnect).toHaveBeenCalled();
         });
 
-        test('should fail receive channels', () => {
+        test('should receive preferences', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onPreferences(SAMPLE_PREFERENCES, null, null);
 
             expect(Client.prototype.emit).toHaveBeenCalledWith('preferencesLoaded', expect.anything());
             expect(tested.preferences).toEqual(SAMPLE_PREFERENCES);
+        });
+    });
+
+    describe('_onMe', () => {
+        const SAMPLE_ME = {
+            id: "obiwan",
+            category: "user",
+        };
+        test('should fail receive me', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onMe({ error: 'error' }, null, null);
+
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+        });
+
+        test('should receive me', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onMe(SAMPLE_ME, null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('meLoaded', expect.anything());
+            expect(tested.me).toEqual(SAMPLE_ME);
+        });
+    });
+
+    describe('_onTeams', () => {
+        const SAMPLE_TEAMS = [{
+            id: "jedi",
+            name: "Light Side",
+        }];
+        test('should fail receive teams', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onTeams({ error: 'error' }, null, null);
+
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+        });
+
+        test('should receive teams', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onTeams(SAMPLE_TEAMS, null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('teamsLoaded', expect.anything());
+            expect(Client.prototype.loadUsers).toHaveBeenCalled();
+            expect(Client.prototype.loadChannels).toHaveBeenCalled();
+            expect(Client.prototype.connect).toHaveBeenCalled();
+            expect(tested.teams).toEqual(SAMPLE_TEAMS);
+            expect(tested.teamID).toBeFalsy();
+        });
+
+        test('should receive teams', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested.group = 'Light Side';
+            tested._onTeams(SAMPLE_TEAMS, null, null);
+            expect(tested.teamID).toBeTruthy();
         });
     });
 });
