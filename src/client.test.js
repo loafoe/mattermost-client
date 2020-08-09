@@ -101,7 +101,7 @@ describe('Client callbacks', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: null });
             expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
-            expect(tested.users).toEqual({ "obiwan": { "id": "obiwan" }, "yoda": { "id": "yoda" } });
+            expect(tested.users).toEqual(PRELOADED_USERS);
             expect(Client.prototype.loadUsers).not.toHaveBeenCalled();
         });
 
@@ -131,6 +131,24 @@ describe('Client callbacks', () => {
 
             expect(Client.prototype.emit).not.toHaveBeenCalled();
             expect(tested.users).toEqual(PRELOADED_USERS);
+        });
+    });
+
+    describe('_onChannels', () => {
+        const SAMPLE_CHANNELS = { "jedi": { "id": "jedi" }, "sith": { "id": "sith" } };
+        test('should fail receive channels', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onChannels({ error: 'No jedi available' }, null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({msg: expect.anything()}));
+        });
+
+        test('should fail receive channels', () => {
+            const tested = new Client(SERVER_URL, 'dummy', {});
+            tested._onChannels([{id: 'jedi'}, {id: 'sith'}], null, null);
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('channelsLoaded', expect.anything());
+            expect(tested.channels).toEqual(SAMPLE_CHANNELS);
         });
     });
 });
