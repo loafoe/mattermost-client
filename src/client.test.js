@@ -231,3 +231,19 @@ describe('Client callbacks', () => {
         });
     });
 });
+
+describe('Route builder', () => {
+    test('should build team route', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.teamID = 'obiwan';
+        const actual = tested.teamRoute();
+        expect(actual).toEqual('/users/me/teams/obiwan');
+    });
+
+    test('should build channel route', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.teamID = 'light';
+        const actual = tested.channelRoute('jedi');
+        expect(actual).toEqual('/users/me/teams/light/channels/jedi');
+    });
+});
