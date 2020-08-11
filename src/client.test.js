@@ -1,11 +1,13 @@
 jest.mock('request');
 const requestMock = require('request');
 const Client = require('./client');
+const clientProtoBkp = Client.prototype;
 
 const SERVER_URL = 'test.foo.bar'
 
 afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
 });
 
 describe('Mattermost login ...', () => {
@@ -50,12 +52,12 @@ describe('Mattermost login ...', () => {
 describe('Client callbacks', () => {
     beforeEach(() => {
         Client.prototype.emit = jest.fn();
-        Client.prototype.getMe = jest.fn();
-        Client.prototype.getPreferences = jest.fn();
-        Client.prototype.getTeams = jest.fn();
+        jest.spyOn(Client.prototype, 'getMe');
+        jest.spyOn(Client.prototype, 'getPreferences');
+        jest.spyOn(Client.prototype, 'getTeams');
         Client.prototype.reconnect = jest.fn();
-        Client.prototype.loadUsers = jest.fn();
-        Client.prototype.loadChannels = jest.fn();
+        jest.spyOn(Client.prototype, 'loadUsers');
+        jest.spyOn(Client.prototype, 'loadChannels');
         Client.prototype.connect = jest.fn();
     });
 
@@ -245,5 +247,88 @@ describe('Route builder', () => {
         tested.teamID = 'light';
         const actual = tested.channelRoute('jedi');
         expect(actual).toEqual('/users/me/teams/light/channels/jedi');
+    });
+});
+
+describe('Simple requesters', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+    const EXPECTED = route => {
+        return { headers: expect.objectContaining({
+            "Authorization": "BEARER obiwanKenobiDummyToken",
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        }),
+        json: null,
+        method: "GET",
+        rejectUnauthorized: true,
+        uri: `https://${SERVER_URL}/api/v4/users/me${route}`,
+    }};
+
+    beforeEach(() => {
+        tested.token = 'obiwanKenobiDummyToken';
+    });
+
+    test('should get me', () => {
+        tested.getMe();
+        expect(requestMock).toHaveBeenCalledWith(EXPECTED(''), expect.anything());
+    });
+
+
+    test('should get my preferences', () => {
+        tested.getPreferences();
+        expect(requestMock).toHaveBeenCalledWith(EXPECTED('/preferences'), expect.anything());
+    });
+
+    test('should get my teams', () => {
+        tested.getTeams();
+        expect(requestMock).toHaveBeenCalledWith(EXPECTED('/teams'), expect.anything());
+    });
+
+    test('should load users page', () => {
+        tested.teamID='jedi';
+        tested.loadUsers();
+        expect(requestMock).toHaveBeenCalledWith({
+            headers: expect.objectContaining({
+                "Authorization": "BEARER obiwanKenobiDummyToken",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            }),
+            json: null,
+            method: "GET",
+            rejectUnauthorized: true,
+            uri: `https://${SERVER_URL}/api/v4/users?page=0&per_page=200&in_team=jedi`,
+        } , expect.anything());
+    });
+
+    test('should load specific user', () => {
+        tested.teamID='jedi';
+        tested.loadUser('yoda');
+        expect(requestMock).toHaveBeenCalledWith({
+            headers: expect.objectContaining({
+                "Authorization": "BEARER obiwanKenobiDummyToken",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            }),
+            json: null,
+            method: "GET",
+            rejectUnauthorized: true,
+            uri: `https://${SERVER_URL}/api/v4/users/yoda`,
+        } , expect.anything());
+    });
+
+    test('should load team channels', () => {
+        tested.teamID='jedi';
+        tested.loadChannels();
+        expect(requestMock).toHaveBeenCalledWith({
+            headers: expect.objectContaining({
+                "Authorization": "BEARER obiwanKenobiDummyToken",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            }),
+            json: null,
+            method: "GET",
+            rejectUnauthorized: true,
+            uri: `https://${SERVER_URL}/api/v4/users/me/teams/jedi/channels`,
+        } , expect.anything());
     });
 });
