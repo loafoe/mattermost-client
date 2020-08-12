@@ -1,7 +1,9 @@
 jest.mock('request');
+jest.mock('ws');
 const requestMock = require('request');
+const WebSocketMock = require('ws');
+
 const Client = require('./client');
-const clientProtoBkp = Client.prototype;
 
 const SERVER_URL = 'test.foo.bar'
 
@@ -58,7 +60,7 @@ describe('Client callbacks', () => {
         Client.prototype.reconnect = jest.fn();
         jest.spyOn(Client.prototype, 'loadUsers');
         jest.spyOn(Client.prototype, 'loadChannels');
-        Client.prototype.connect = jest.fn();
+        jest.spyOn(Client.prototype, 'connect');
     });
 
     describe('_onLogin', () => {
@@ -330,5 +332,18 @@ describe('Simple requesters', () => {
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/me/teams/jedi/channels`,
         } , expect.anything());
+    });
+});
+
+describe('Connect / Reconnect / Disconnect', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+
+    test('should connect to mattermost', () => {
+        tested.connect();
+
+        expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('error', expect.anything());
+        expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('open', expect.anything());
+        expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('message', expect.anything());
+        expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('close', expect.anything());
     });
 });
