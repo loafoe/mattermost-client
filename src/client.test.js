@@ -5,7 +5,7 @@ const WebSocketMock = require('ws');
 
 const Client = require('./client');
 
-const SERVER_URL = 'test.foo.bar'
+const SERVER_URL = 'test.foo.bar';
 
 afterEach(() => {
     jest.clearAllMocks();
@@ -13,21 +13,20 @@ afterEach(() => {
 });
 
 describe('Mattermost login ...', () => {
-
     test('should login with credentials', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.login('obiwan.kenobi@jedi.org', 'password', null);
         expect(requestMock).toHaveBeenCalledWith({
             headers: expect.objectContaining({
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             }),
             json: {
-                "login_id": "obiwan.kenobi@jedi.org",
-                "password": "password",
-                "token": null,
+                login_id: 'obiwan.kenobi@jedi.org',
+                password: 'password',
+                token: null,
             },
-            method: "POST",
+            method: 'POST',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/login`,
         }, expect.anything());
@@ -38,17 +37,16 @@ describe('Mattermost login ...', () => {
         tested.tokenLogin('obiwanKenobiDummyToken');
         expect(requestMock).toHaveBeenCalledWith({
             headers: expect.objectContaining({
-                "Authorization": "BEARER obiwanKenobiDummyToken",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
+                Authorization: 'BEARER obiwanKenobiDummyToken',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             }),
             json: null,
-            method: "GET",
+            method: 'GET',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/me`,
         }, expect.anything());
     });
-
 });
 
 describe('Client callbacks', () => {
@@ -61,6 +59,7 @@ describe('Client callbacks', () => {
         jest.spyOn(Client.prototype, 'loadUsers');
         jest.spyOn(Client.prototype, 'loadChannels');
         jest.spyOn(Client.prototype, 'connect');
+        jest.spyOn(Client.prototype, '_send');
     });
 
     describe('_onLogin', () => {
@@ -96,7 +95,7 @@ describe('Client callbacks', () => {
     });
 
     describe('_onLoadUser(s)', () => {
-        const PRELOADED_USERS = { "obiwan": { "id": "obiwan" }, "yoda": { "id": "yoda" } };
+        const PRELOADED_USERS = { obiwan: { id: 'obiwan' }, yoda: { id: 'yoda' } };
         test('should failed on bad data', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLoadUsers(null, null, null);
@@ -127,7 +126,7 @@ describe('Client callbacks', () => {
             expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
             expect(tested.users).toEqual(expect.objectContaining({
                 ...PRELOADED_USERS,
-                "luke": { "id": "luke" }
+                luke: { id: 'luke' },
             }));
         });
 
@@ -142,17 +141,17 @@ describe('Client callbacks', () => {
     });
 
     describe('_onChannels', () => {
-        const SAMPLE_CHANNELS = { "jedi": { "id": "jedi" }, "sith": { "id": "sith" } };
+        const SAMPLE_CHANNELS = { jedi: { id: 'jedi' }, sith: { id: 'sith' } };
         test('should fail receive channels', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onChannels({ error: 'No jedi available' }, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({msg: expect.anything()}));
+            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
         });
 
         test('should receive channels', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
-            tested._onChannels([{id: 'jedi'}, {id: 'sith'}], null, null);
+            tested._onChannels([{ id: 'jedi' }, { id: 'sith' }], null, null);
 
             expect(Client.prototype.emit).toHaveBeenCalledWith('channelsLoaded', expect.anything());
             expect(tested.channels).toEqual(SAMPLE_CHANNELS);
@@ -161,10 +160,10 @@ describe('Client callbacks', () => {
 
     describe('_onPreferences', () => {
         const SAMPLE_PREFERENCES = {
-            "user_id": "obiwan",
-            "category": "user",
-            "name": "Obiwan",
-            "value": "Kenobi"
+            user_id: 'obiwan',
+            category: 'user',
+            name: 'Obiwan',
+            value: 'Kenobi',
         };
         test('should fail receive preferences', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
@@ -184,8 +183,8 @@ describe('Client callbacks', () => {
 
     describe('_onMe', () => {
         const SAMPLE_ME = {
-            id: "obiwan",
-            category: "user",
+            id: 'obiwan',
+            category: 'user',
         };
         test('should fail receive me', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
@@ -205,8 +204,8 @@ describe('Client callbacks', () => {
 
     describe('_onTeams', () => {
         const SAMPLE_TEAMS = [{
-            id: "jedi",
-            name: "Light Side",
+            id: 'jedi',
+            name: 'Light Side',
         }];
         test('should fail receive teams', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
@@ -254,17 +253,17 @@ describe('Route builder', () => {
 
 describe('Simple requesters', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
-    const EXPECTED = route => {
-        return { headers: expect.objectContaining({
-            "Authorization": "BEARER obiwanKenobiDummyToken",
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
+    const EXPECTED = (route) => ({
+        headers: expect.objectContaining({
+            Authorization: 'BEARER obiwanKenobiDummyToken',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         }),
         json: null,
-        method: "GET",
+        method: 'GET',
         rejectUnauthorized: true,
         uri: `https://${SERVER_URL}/api/v4/users/me${route}`,
-    }};
+    });
 
     beforeEach(() => {
         tested.token = 'obiwanKenobiDummyToken';
@@ -274,7 +273,6 @@ describe('Simple requesters', () => {
         tested.getMe();
         expect(requestMock).toHaveBeenCalledWith(EXPECTED(''), expect.anything());
     });
-
 
     test('should get my preferences', () => {
         tested.getPreferences();
@@ -287,63 +285,161 @@ describe('Simple requesters', () => {
     });
 
     test('should load users page', () => {
-        tested.teamID='jedi';
+        tested.teamID = 'jedi';
         tested.loadUsers();
         expect(requestMock).toHaveBeenCalledWith({
             headers: expect.objectContaining({
-                "Authorization": "BEARER obiwanKenobiDummyToken",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
+                Authorization: 'BEARER obiwanKenobiDummyToken',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             }),
             json: null,
-            method: "GET",
+            method: 'GET',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users?page=0&per_page=200&in_team=jedi`,
-        } , expect.anything());
+        }, expect.anything());
     });
 
     test('should load specific user', () => {
-        tested.teamID='jedi';
+        tested.teamID = 'jedi';
         tested.loadUser('yoda');
         expect(requestMock).toHaveBeenCalledWith({
             headers: expect.objectContaining({
-                "Authorization": "BEARER obiwanKenobiDummyToken",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
+                Authorization: 'BEARER obiwanKenobiDummyToken',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             }),
             json: null,
-            method: "GET",
+            method: 'GET',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/yoda`,
-        } , expect.anything());
+        }, expect.anything());
     });
 
     test('should load team channels', () => {
-        tested.teamID='jedi';
+        tested.teamID = 'jedi';
         tested.loadChannels();
         expect(requestMock).toHaveBeenCalledWith({
             headers: expect.objectContaining({
-                "Authorization": "BEARER obiwanKenobiDummyToken",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
+                Authorization: 'BEARER obiwanKenobiDummyToken',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             }),
             json: null,
-            method: "GET",
+            method: 'GET',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/me/teams/jedi/channels`,
-        } , expect.anything());
+        }, expect.anything());
     });
 });
 
 describe('Connect / Reconnect / Disconnect', () => {
-    const tested = new Client(SERVER_URL, 'dummy', {});
-
     test('should connect to mattermost', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
-
         expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('error', expect.anything());
         expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('open', expect.anything());
         expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('message', expect.anything());
         expect(WebSocketMock.prototype.on).toHaveBeenCalledWith('close', expect.anything());
+    });
+
+    describe('connect websocket handlers', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        beforeEach(() => {
+            tested.connect();
+            jest.spyOn(Client.prototype, '_send');
+        });
+        test('should ws return error', () => {
+            const onCall = WebSocketMock.prototype.on.mock.calls[0];
+            expect(onCall[0]).toEqual('error');
+            onCall[1]('testing error return');
+            expect(Client.prototype.emit).toHaveBeenCalledWith('error', 'testing error return');
+        });
+
+        test('should ws return open', () => {
+            const onCall = WebSocketMock.prototype.on.mock.calls[1];
+            expect(onCall[0]).toEqual('open');
+            onCall[1]('testing error return');
+            expect(Client.prototype.emit).toHaveBeenCalledWith('connected');
+            expect(Client.prototype._send).toHaveBeenCalledWith(
+                {
+                    action: 'authentication_challenge', data: { token: null }, id: 1, seq: 1,
+                },
+            );
+            expect(tested._pongTimeout).not.toBeNull();
+        });
+    });
+
+    describe('Pong timeout', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+
+        beforeEach(() => {
+            Client.prototype.reconnect = jest.fn();
+            jest.spyOn(Client.prototype, '_send');
+            tested.connect();
+            const onCall = WebSocketMock.prototype.on.mock.calls[1];
+            expect(onCall[0]).toEqual('open');
+            jest.useFakeTimers();
+            jest.clearAllTimers();
+            onCall[1]();
+            Client.prototype._send.mockReset();
+        });
+
+        test('should ping pong', () => {
+            expect(setInterval).toBeCalled();
+
+            tested.connected = true;
+            tested._lastPong = Date.now() - 1;
+            jest.runOnlyPendingTimers();
+            expect(Client.prototype._send).toHaveBeenCalledWith({ action: 'ping' });
+        });
+
+        test('should reconnect if note connected', () => {
+            expect(setInterval).toBeCalled();
+            tested.connected = false;
+            jest.runOnlyPendingTimers();
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+        });
+
+        test('should reconnect if last ping too late', () => {
+            expect(setInterval).toBeCalled();
+            tested.connected = true;
+            tested._lastPong = Date.now() - (3 * tested._pingInterval);
+            jest.runOnlyPendingTimers();
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+        });
+    });
+
+    describe('close websocket handlers', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+
+        beforeEach(() => {
+            Client.prototype.reconnect = jest.fn();
+            tested.connect();
+        });
+
+        test('should close socket', () => {
+            tested.connected = true;
+            tested.autoReconnect = false;
+            const onCall = WebSocketMock.prototype.on.mock.calls[3];
+            expect(onCall[0]).toEqual('close');
+            onCall[1](200, 'obiwan');
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
+            expect(Client.prototype.reconnect).not.toHaveBeenCalled();
+            expect(tested.connected).toBeFalsy();
+        });
+
+        test('should close socket with autoreconnect', () => {
+            tested.connected = true;
+            tested.autoReconnect = true;
+            const onCall = WebSocketMock.prototype.on.mock.calls[3];
+            expect(onCall[0]).toEqual('close');
+            onCall[1](200, 'obiwan');
+
+            expect(Client.prototype.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
+            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.connected).toBe(false);
+        });
     });
 });
