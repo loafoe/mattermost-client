@@ -500,4 +500,21 @@ describe('Connect / Reconnect / Disconnect', () => {
         jest.runOnlyPendingTimers();
         expect(tested.tokenLogin).toHaveBeenCalledWith('obiwan.kenobi.rules');
     });
+
+    test('should disconnect when never connected', () => {
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        expect(tested.disconnect()).toBeFalsy();
+    });
+
+    test('should disconnect when connected', () => {
+        jest.useFakeTimers();
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.connect();
+        const onCall = WebSocketMock.prototype.on.mock.calls[1];
+        expect(onCall[0]).toEqual('open');
+        onCall[1]();
+        expect(tested.disconnect()).toBeTruthy();
+        expect(clearInterval).toBeCalled();
+        expect(tested.ws.close).toBeCalled();
+    });
 });
