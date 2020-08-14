@@ -55,7 +55,7 @@ describe('Client callbacks', () => {
         jest.spyOn(Client.prototype, 'getMe');
         jest.spyOn(Client.prototype, 'getPreferences');
         jest.spyOn(Client.prototype, 'getTeams');
-        Client.prototype.reconnect = jest.fn();
+        jest.spyOn(Client.prototype, 'reconnect');
         jest.spyOn(Client.prototype, 'loadUsers');
         jest.spyOn(Client.prototype, 'loadChannels');
         jest.spyOn(Client.prototype, 'connect');
@@ -69,7 +69,7 @@ describe('Client callbacks', () => {
 
             expect(Client.prototype.reconnect).toHaveBeenCalled();
             expect(tested.authenticated).toBeFalsy();
-            expect(tested._reconnecting).toBeFalsy();
+            expect(tested._reconnecting).toBeTruthy();
         });
 
         test('should reconnect when null data', () => {
@@ -79,7 +79,7 @@ describe('Client callbacks', () => {
             expect(Client.prototype.reconnect).toHaveBeenCalled();
             expect(Client.prototype.emit).toHaveBeenCalledWith('error', null);
             expect(tested.authenticated).toBeFalsy();
-            expect(tested._reconnecting).toBeFalsy();
+            expect(tested._reconnecting).toBeTruthy();
         });
 
         test('should retrieve info when success', () => {
@@ -374,7 +374,7 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            Client.prototype.reconnect = jest.fn();
+            jest.spyOn(Client.prototype, 'reconnect').mockImplementation(() => {});
             jest.spyOn(Client.prototype, '_send');
             tested.connect();
             const onCall = WebSocketMock.prototype.on.mock.calls[1];
@@ -414,7 +414,7 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            Client.prototype.reconnect = jest.fn();
+            jest.spyOn(Client.prototype, 'reconnect').mockImplementation(() => {});
             tested.connect();
         });
 
@@ -441,5 +441,63 @@ describe('Connect / Reconnect / Disconnect', () => {
             expect(Client.prototype.reconnect).toHaveBeenCalled();
             expect(tested.connected).toBe(false);
         });
+    });
+
+    test('should reconnect', () => {
+        jest.useFakeTimers();
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.connect();
+        this._reconnecting = false;
+        tested._pongTimeout = 65;
+
+        tested.reconnect();
+
+        expect(clearInterval).toBeCalled();
+        expect(tested.ws.close).toHaveBeenCalled();
+        expect(setTimeout).toBeCalled();
+    });
+
+    test.skip('should avoid infinite reconnection', () => {
+        jest.useFakeTimers();
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.connect();
+        this._reconnecting = true;
+        tested._pongTimeout = 65;
+
+        tested.reconnect();
+
+        expect(clearInterval).not.toBeCalled();
+        expect(tested.ws.close).not.toHaveBeenCalled();
+        expect(setTimeout).not.toBeCalled();
+    });
+
+    test('should login from reconnect', () => {
+        jest.useFakeTimers();
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.login('obiwan.kenobi@jedi.com', 'the4th', null);
+        jest.spyOn(tested, 'login');
+        tested.connect();
+        this._reconnecting = true;
+        tested._pongTimeout = 65;
+
+        jest.clearAllTimers();
+        tested.reconnect();
+        jest.runOnlyPendingTimers();
+        expect(tested.login).toHaveBeenCalledWith('obiwan.kenobi@jedi.com', 'the4th', null);
+    });
+
+    test('should login from reconnect with token', () => {
+        jest.useFakeTimers();
+        const tested = new Client(SERVER_URL, 'dummy', {});
+        tested.tokenLogin('obiwan.kenobi.rules');
+        jest.spyOn(tested, 'tokenLogin');
+        tested.connect();
+        this._reconnecting = true;
+        tested._pongTimeout = 65;
+
+        jest.clearAllTimers();
+        tested.reconnect();
+        jest.runOnlyPendingTimers();
+        expect(tested.tokenLogin).toHaveBeenCalledWith('obiwan.kenobi.rules');
     });
 });
