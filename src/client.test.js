@@ -4,6 +4,7 @@ const requestMock = require('request');
 const WebSocketMock = require('ws');
 
 const Client = require('./client');
+const User = require('./user');
 
 const SERVER_URL = 'test.foo.bar';
 
@@ -522,7 +523,7 @@ describe('Connect / Reconnect / Disconnect', () => {
 describe('Mattermost Message reciever', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
 
-    test('should recieve post', () => {
+    test('should receive post', () => {
         tested.onMessage({ event: 'ping' });
         expect(tested.emit).toHaveBeenCalledWith('ping', expect.anything());
 
@@ -553,20 +554,105 @@ describe('Mattermost Message reciever', () => {
         'user_updated',
         'status_change',
         'webrtc',
-    ])('should recieve %s events', (eventName) => {
+    ])('should receive %s events', (eventName) => {
         tested.onMessage({ event: eventName });
         expect(tested.emit).toHaveBeenCalledWith(eventName, expect.anything());
     });
 
-    test('should recieve posted events', () => {
+    test('should receive posted events', () => {
         tested.onMessage({ event: 'posted' });
         expect(tested.emit).toHaveBeenCalledWith('message', expect.anything());
     });
 
-    test('should recieve new user events', () => {
+    test('should receive new user events', () => {
         jest.spyOn(tested, 'loadUser');
         tested.onMessage({ event: 'new_user', data: { user_id: 'obiwan' } });
         expect(tested.emit).toHaveBeenCalledWith('new_user', expect.anything());
         expect(tested.loadUser).toHaveBeenCalledWith('obiwan');
+    });
+});
+
+describe('Basic Getters', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+    const CHANNELS_SAMPLE = {
+        jedi: { id: 'jedi', name: 'jedi' },
+        sith: { id: 'sith', name: 'sith' },
+        yobiwan: { id: 'yobiwan', name: 'yoda__obiwan' },
+    };
+    beforeEach(() => {
+        tested.users = {
+            obiwan: { id: 'obiwan', email: 'obiwan.kenobi@jedi.com' },
+            yoda: { id: 'yoda', email: 'yoda@jedi.com' },
+        };
+        tested.self = new User(tested.users.obiwan);
+        tested.channels = CHANNELS_SAMPLE;
+    });
+
+    test('should get user by id', () => {
+        const actual = tested.getUserByID('obiwan');
+        expect(actual.id).toEqual('obiwan');
+    });
+
+    test('should get user by email', () => {
+        const actual = tested.getUserByEmail('yoda@jedi.com');
+        expect(actual.id).toEqual('yoda');
+    });
+
+    test('should get existing direct user channel', () => {
+        let actual;
+        tested.getUserDirectMessageChannel('yoda', (channel) => { actual = channel; });
+        expect(actual).toEqual(expect.objectContaining({ id: 'yobiwan' }));
+    });
+
+    test('should get non existing direct user channel', () => {
+        let actual;
+        jest.spyOn(tested, 'createDirectChannel').mockImplementation((userId, callback) => callback({ id: 'libiwan' }));
+        tested.getUserDirectMessageChannel('luke', (channel) => { actual = channel; });
+        expect(tested.createDirectChannel).toBeCalled();
+        expect(actual).toEqual(expect.objectContaining({ id: 'libiwan' }));
+    });
+
+    test('should get channels', () => {
+        expect(tested.getAllChannels()).toEqual(CHANNELS_SAMPLE);
+    });
+
+    test('should get channel by id', () => {
+        expect(tested.getChannelByID('jedi')).toEqual({ id: 'jedi', name: 'jedi' });
+    });
+});
+
+describe('Mattermost messaging', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+
+    test('should send custom message', () => {
+        jest.spyOn(tested, '_apiCall');
+        tested.customMessage({ message: 'The Force will be with you' }, 'jedi');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: { channel_id: 'jedi', message: 'The Force will be with you' },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+        const callback = tested._apiCall.mock.calls[0][3];
+        expect(callback('', '')).toBeTruthy();
+    });
+
+    test('should send very long message', () => {
+        const veryLongMessage = 'x'.repeat(5000);
+        jest.spyOn(tested, '_apiCall');
+        tested.customMessage({ message: veryLongMessage }, 'jedi');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: { channel_id: 'jedi', message: 'x'.repeat(4000) },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+
+        const callback = tested._apiCall.mock.calls[0][3];
+        callback('', '');
+
+        expect(requestMock).toHaveBeenLastCalledWith(expect.objectContaining({
+            json: { channel_id: 'jedi', message: 'x'.repeat(1000) },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
     });
 });
