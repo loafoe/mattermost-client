@@ -518,3 +518,55 @@ describe('Connect / Reconnect / Disconnect', () => {
         expect(tested.ws.close).toBeCalled();
     });
 });
+
+describe('Mattermost Message reciever', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+
+    test('should recieve post', () => {
+        tested.onMessage({ event: 'ping' });
+        expect(tested.emit).toHaveBeenCalledWith('ping', expect.anything());
+
+        tested.onMessage({ data: { text: 'pong' } });
+        expect(tested.emit).toHaveBeenCalledWith('ping', expect.anything());
+    });
+
+    test.each([
+        'added_to_team',
+        'authentication_challenge',
+        'channel_converted',
+        'channel_created',
+        'channel_deleted',
+        'channel_member_updated',
+        'channel_updated',
+        'channel_viewed',
+        'config_changed',
+        'delete_team',
+        'ephemeral_message',
+        'hello',
+        'typing',
+        'post_edit',
+        'post_deleted',
+        'preference_changed',
+        'user_added',
+        'user_removed',
+        'user_role_updated',
+        'user_updated',
+        'status_change',
+        'webrtc',
+    ])('should recieve %s events', (eventName) => {
+        tested.onMessage({ event: eventName });
+        expect(tested.emit).toHaveBeenCalledWith(eventName, expect.anything());
+    });
+
+    test('should recieve posted events', () => {
+        tested.onMessage({ event: 'posted' });
+        expect(tested.emit).toHaveBeenCalledWith('message', expect.anything());
+    });
+
+    test('should recieve new user events', () => {
+        jest.spyOn(tested, 'loadUser');
+        tested.onMessage({ event: 'new_user', data: { user_id: 'obiwan' } });
+        expect(tested.emit).toHaveBeenCalledWith('new_user', expect.anything());
+        expect(tested.loadUser).toHaveBeenCalledWith('obiwan');
+    });
+});
