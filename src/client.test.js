@@ -623,9 +623,11 @@ describe('Basic Getters', () => {
 
 describe('Mattermost messaging', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
+    beforeEach(() => {
+        jest.spyOn(tested, '_apiCall');
+    });
 
     test('should send custom message', () => {
-        jest.spyOn(tested, '_apiCall');
         tested.customMessage({ message: 'The Force will be with you' }, 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: { channel_id: 'jedi', message: 'The Force will be with you' },
@@ -638,7 +640,6 @@ describe('Mattermost messaging', () => {
 
     test('should send very long message', () => {
         const veryLongMessage = 'x'.repeat(5000);
-        jest.spyOn(tested, '_apiCall');
         tested.customMessage({ message: veryLongMessage }, 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: { channel_id: 'jedi', message: 'x'.repeat(4000) },
@@ -654,5 +655,44 @@ describe('Mattermost messaging', () => {
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
         }), expect.anything());
+    });
+
+    test('should open dialog', () => {
+        tested.dialog('dialogId', 'https://blog.i-run.si', {
+            callback_id: 'string',
+            title: 'string',
+        });
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: {
+                dialog: { callback_id: 'string', title: 'string' },
+                trigger_id: 'dialogId',
+                url: 'https://blog.i-run.si',
+            },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/actions/dialogs/open',
+        }), expect.anything());
+    });
+
+    test('should edit post', () => {
+        tested.editPost('postId', 'The Force will be with you, always');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: { id: 'postId', message: 'The Force will be with you, always' },
+            method: 'PUT',
+            uri: 'https://test.foo.bar/api/v4/posts/postId',
+        }), expect.anything());
+    });
+
+    test('should upload file', () => {
+        const callback = jest.fn();
+        tested.uploadFile('postId', 'The Force will be with you, always', callback);
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            formData: { channel_id: 'postId', files: 'The Force will be with you, always' },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/files',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        apiCallback('');
+        expect(callback).toBeCalled();
     });
 });
