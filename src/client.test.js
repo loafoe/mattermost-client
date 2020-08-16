@@ -619,11 +619,20 @@ describe('Basic Getters', () => {
     test('should get channel by id', () => {
         expect(tested.getChannelByID('jedi')).toEqual({ id: 'jedi', name: 'jedi' });
     });
+
+    test('should find channel by name', () => {
+        expect(tested.findChannelByName('sith')).toEqual({ id: 'sith', name: 'sith' });
+    });
+
+    test('should chunck message', () => {
+        expect(tested._chunkMessage('x'.repeat(5000))).toEqual(['x'.repeat(4000), 'x'.repeat(1000)]);
+    });
 });
 
 describe('Mattermost messaging', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
     beforeEach(() => {
+        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
         jest.spyOn(tested, '_apiCall');
     });
 
@@ -652,6 +661,60 @@ describe('Mattermost messaging', () => {
 
         expect(requestMock).toHaveBeenLastCalledWith(expect.objectContaining({
             json: { channel_id: 'jedi', message: 'x'.repeat(1000) },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+    });
+
+    test('should post message', () => {
+        tested.postMessage('The Force will be with you', 'jedi');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: {
+                channel_id: 'jedi', create_at: 0, file_ids: [], message: 'The Force will be with you', user_id: 'obiwan',
+            },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+        const callback = tested._apiCall.mock.calls[0][3];
+        expect(callback('', '')).toBeTruthy();
+    });
+
+    test('should post complex message', () => {
+        tested.postMessage({ message: 'The Force will be with you', props: { type: 'bold' }, file_ids: ['obiwan.xml'] }, 'jedi');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: {
+                channel_id: 'jedi',
+                create_at: 0,
+                file_ids: ['obiwan.xml'],
+                message: 'The Force will be with you',
+                props: { type: 'bold' },
+                user_id: 'obiwan',
+            },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+        const callback = tested._apiCall.mock.calls[0][3];
+        expect(callback('', '')).toBeTruthy();
+    });
+
+    test('should post very long message', () => {
+        const veryLongMessage = 'x'.repeat(5000);
+        tested.postMessage(veryLongMessage, 'jedi');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: {
+                channel_id: 'jedi', create_at: 0, file_ids: [], message: 'x'.repeat(4000), user_id: 'obiwan',
+            },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/posts',
+        }), expect.anything());
+
+        const callback = tested._apiCall.mock.calls[0][3];
+        callback('', '');
+
+        expect(requestMock).toHaveBeenLastCalledWith(expect.objectContaining({
+            json: {
+                channel_id: 'jedi', create_at: 0, file_ids: [], message: 'x'.repeat(1000), user_id: 'obiwan',
+            },
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
         }), expect.anything());
@@ -701,7 +764,6 @@ describe('Mattermost messaging', () => {
     });
 
     test('should react to post', () => {
-        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
         tested.react('messageId', 'metal');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: {
@@ -716,7 +778,6 @@ describe('Mattermost messaging', () => {
     });
 
     test('should unreact to post', () => {
-        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
         tested.unreact('messageId', 'metal');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             method: 'DELETE',
@@ -725,5 +786,19 @@ describe('Mattermost messaging', () => {
 
         const apiCallback = tested._apiCall.mock.calls[0][3];
         apiCallback('');
+    });
+
+    test('should create direct channel', () => {
+        const callback = jest.fn();
+        tested.createDirectChannel('yoda', callback);
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: ['yoda', 'obiwan'],
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/channels/direct',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        apiCallback('');
+        expect(callback).toBeCalled();
     });
 });
