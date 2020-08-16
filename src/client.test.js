@@ -695,4 +695,35 @@ describe('Mattermost messaging', () => {
         apiCallback('');
         expect(callback).toBeCalled();
     });
+
+    test.skip('should fail when react without self', () => {
+        expect(tested.react('messageId', 'metal')).toBeFalsy();
+    });
+
+    test('should react to post', () => {
+        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
+        tested.react('messageId', 'metal');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: {
+                create_at: 0, emoji_name: 'metal', post_id: 'messageId', user_id: 'obiwan',
+            },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/reactions',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        apiCallback('');
+    });
+
+    test('should unreact to post', () => {
+        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
+        tested.unreact('messageId', 'metal');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            method: 'DELETE',
+            uri: 'https://test.foo.bar/api/v4/users/me/posts/messageId/reactions/metal',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        apiCallback('');
+    });
 });
