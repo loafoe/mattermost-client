@@ -827,3 +827,59 @@ describe('Mattermost messaging', () => {
         expect(apiCallback('')).toBeTruthy();
     });
 });
+
+describe('Private methods', () => {
+    const tested = new Client(SERVER_URL, 'dummy', {});
+    beforeEach(() => {
+        tested.connect();
+        tested.connected = true;
+    });
+
+    test('should send through websocket', () => {
+        const actual = tested._send({ id: 'ID', text: 'May the 4th' });
+        expect(actual).not.toBeFalsy();
+        expect(tested.ws.send).toHaveBeenCalledWith('{"id":1,"text":"May the 4th","seq":1}');
+    });
+
+    test('should fail to send when not connected', () => {
+        tested.connected = false;
+        const actual = tested._send({ id: 'ID', text: 'May the 4th' });
+        expect(actual).toBeFalsy();
+        expect(tested.ws.send).not.toHaveBeenCalled();
+    });
+
+    test('should call api with error', () => {
+        const callback = jest.fn();
+        tested._apiCall('POST', '/test', null, callback, null);
+        expect(requestMock).toHaveBeenCalled();
+
+        const requestCallArgs = requestMock.mock.calls[0];
+        requestCallArgs[1]({ errno: 404, msg: 'error message' }, null, null);
+        expect(callback).toHaveBeenCalledWith({ error: 404, id: null }, {}, {});
+    });
+
+    test('should call api with status error', () => {
+        const callback = jest.fn();
+        tested._apiCall('POST', '/test', null, callback, null);
+        expect(requestMock).toHaveBeenCalled();
+
+        const requestCallArgs = requestMock.mock.calls[0];
+        requestCallArgs[1](null, { statusCode: 404, headers: { Content: 'application/json' } }, '{"id":1,"text":"May the 4th","seq":1}');
+        expect(callback).toHaveBeenCalledWith(
+            { error: 'API response: 404 "{\\"id\\":1,\\"text\\":\\"May the 4th\\",\\"seq\\":1}"', id: null },
+            { Content: 'application/json' }, {},
+        );
+    });
+
+    test('should call api with 20x return', () => {
+        const callback = jest.fn();
+        tested._apiCall('POST', '/test', null, callback, null);
+        expect(requestMock).toHaveBeenCalled();
+
+        const requestCallArgs = requestMock.mock.calls[0];
+        requestCallArgs[1](null, { statusCode: 200, headers: { Content: 'application/json' } }, '{"id":1,"text":"May the 4th","seq":1}');
+        expect(callback).toHaveBeenCalledWith(
+            { id: 1, seq: 1, text: 'May the 4th' }, { Content: 'application/json' }, {},
+        );
+    });
+});
