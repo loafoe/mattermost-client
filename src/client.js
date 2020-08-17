@@ -144,7 +144,7 @@ class Client extends EventEmitter {
             this.users[data.id] = data;
             return this.emit('profilesLoaded', [data]);
         }
-        return this.emit('error', [data.error]);
+        return false;
     }
 
     _onChannels(data, _headers, _params) {
@@ -416,7 +416,9 @@ class Client extends EventEmitter {
     }
 
     getUserByEmail(email) {
-        return this.users.find((user) => user.email === email);
+        const foundUserId = Object.keys(this.users)
+            .find((id) => this.users[id].email === email);
+        return this.users[foundUserId] || null;
     }
 
     getUserDirectMessageChannel(userID, callback) {
@@ -533,7 +535,7 @@ class Client extends EventEmitter {
                 const isDisplayNameEqual = this.channels[channel].display_name === name;
                 return isNameEqual || isDisplayNameEqual;
             });
-        return foundChannel || null;
+        return this.channels[foundChannel] || null;
     }
 
     static _chunkMessage(msg) {
@@ -623,7 +625,8 @@ class Client extends EventEmitter {
         return message;
     }
 
-    _apiCall(method, path, params, callback, callback_params = {}) {
+    _apiCall(method, path, params, callback, callback_params) {
+        const safe_callback_params = callback_params || {};
         let isForm = false;
         let safeMethod = method;
         if (typeof method !== 'string') {
@@ -660,14 +663,14 @@ class Client extends EventEmitter {
         return request(options, (error, res, value) => {
             if (error) {
                 if (callback) {
-                    return callback({ id: null, error: error.errno }, {}, callback_params);
+                    return callback({ id: null, error: error.errno }, {}, safe_callback_params);
                 }
             } else if (callback) {
                 if ((res.statusCode === 200) || (res.statusCode === 201)) {
                     const objectValue = (typeof value === 'string') ? JSON.parse(value) : value;
-                    return callback(objectValue, res.headers, callback_params);
+                    return callback(objectValue, res.headers, safe_callback_params);
                 }
-                return callback({ id: null, error: `API response: ${res.statusCode} ${JSON.stringify(value)}` }, res.headers, callback_params);
+                return callback({ id: null, error: `API response: ${res.statusCode} ${JSON.stringify(value)}` }, res.headers, safe_callback_params);
             }
             return null;
         });

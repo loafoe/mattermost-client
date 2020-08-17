@@ -133,10 +133,11 @@ describe('Client callbacks', () => {
 
         test('should fail load user', () => {
             const tested = new Client(SERVER_URL, 'dummy', {});
+            tested.emit = jest.fn();
             tested.users = PRELOADED_USERS;
             tested._onLoadUser({ error: 'No jedi available' }, null, null);
 
-            expect(Client.prototype.emit).not.toHaveBeenCalled();
+            expect(tested.emit).not.toHaveBeenCalled();
             expect(tested.users).toEqual(PRELOADED_USERS);
         });
     });
@@ -347,24 +348,25 @@ describe('Connect / Reconnect / Disconnect', () => {
     describe('connect websocket handlers', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
         beforeEach(() => {
+            tested.emit = jest.fn();
             tested.connect();
-            jest.spyOn(Client.prototype, '_send');
+            jest.spyOn(tested, '_send');
         });
         test('should ws return error', () => {
             const onCall = WebSocketMock.prototype.on.mock.calls[0];
             expect(onCall[0]).toEqual('error');
             onCall[1]('testing error return');
-            expect(Client.prototype.emit).toHaveBeenCalledWith('error', 'testing error return');
+            expect(tested.emit).toHaveBeenCalledWith('error', 'testing error return');
         });
 
         test('should ws return open', () => {
             const onCall = WebSocketMock.prototype.on.mock.calls[1];
             expect(onCall[0]).toEqual('open');
             onCall[1]('testing error return');
-            expect(Client.prototype.emit).toHaveBeenCalledWith('connected');
-            expect(Client.prototype._send).toHaveBeenCalledWith(
+            expect(tested.emit).toHaveBeenCalledWith('connected');
+            expect(tested._send).toHaveBeenCalledWith(
                 {
-                    action: 'authentication_challenge', data: { token: null }, id: 1, seq: 1,
+                    action: 'authentication_challenge', data: { token: null },
                 },
             );
             expect(tested._pongTimeout).not.toBeNull();
@@ -458,11 +460,11 @@ describe('Connect / Reconnect / Disconnect', () => {
         expect(setTimeout).toBeCalled();
     });
 
-    test.skip('should avoid infinite reconnection', () => {
+    test('should avoid infinite reconnection', () => {
         jest.useFakeTimers();
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
-        this._reconnecting = true;
+        tested._reconnecting = true;
         tested._pongTimeout = 65;
 
         tested.reconnect();
@@ -625,7 +627,7 @@ describe('Basic Getters', () => {
     });
 
     test('should chunck message', () => {
-        expect(tested._chunkMessage('x'.repeat(5000))).toEqual(['x'.repeat(4000), 'x'.repeat(1000)]);
+        expect(Client._chunkMessage('x'.repeat(5000))).toEqual(['x'.repeat(4000), 'x'.repeat(1000)]);
     });
 });
 
