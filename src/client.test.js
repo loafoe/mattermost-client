@@ -633,6 +633,7 @@ describe('Mattermost messaging', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
     beforeEach(() => {
         tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
+        tested.teamID = 'jedi';
         jest.spyOn(tested, '_apiCall');
     });
 
@@ -800,5 +801,29 @@ describe('Mattermost messaging', () => {
         const apiCallback = tested._apiCall.mock.calls[0][3];
         apiCallback('');
         expect(callback).toBeCalled();
+    });
+
+    test('should set channel header', () => {
+        tested.setChannelHeader('channelId', 'May The 4th');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: { channel_id: 'channelId', channel_header: 'May The 4th' },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/users/me/teams/jedi/channels/update_header',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        expect(apiCallback('')).toBeTruthy();
+    });
+
+    test('should post command', () => {
+        tested.postCommand('channelId', '/command');
+        expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+            json: { channel_id: 'channelId', command: '/command' },
+            method: 'POST',
+            uri: 'https://test.foo.bar/api/v4/commands/execute',
+        }), expect.anything());
+
+        const apiCallback = tested._apiCall.mock.calls[0][3];
+        expect(apiCallback('')).toBeTruthy();
     });
 });
