@@ -40,7 +40,6 @@ For interaction with Mattermost versions please use version of the library match
 
 # TODO
 
-- Write tests
 - Implement more API calls
 
 # License

@@ -4,7 +4,8 @@
   "description": "Mattermost client",
   "main": "./src/client.js",
   "scripts": {
-    "test": "node_modules/.bin/jest"
+    "test": "node_modules/.bin/jest",
+    "lint": "node_modules/.bin/eslint src"
   },
   "repository": {
     "type": "git",
