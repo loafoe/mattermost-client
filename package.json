@@ -20,6 +20,9 @@
   "bugs": {
     "url": "https://github.com/loafoe/mattermost-client/issues"
   },
+  "jest": {
+    "testEnvironment": "node"
+  },
   "homepage": "https://github.com/loafoe/mattermost-client#readme",
   "dependencies": {
     "extend": "^3.0.2",

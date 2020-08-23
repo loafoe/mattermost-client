@@ -8,6 +8,10 @@ const User = require('./user');
 
 const SERVER_URL = 'test.foo.bar';
 
+beforeEach(() => {
+    Client.prototype.emit = jest.fn();
+});
+
 afterEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
@@ -51,44 +55,43 @@ describe('Mattermost login ...', () => {
 });
 
 describe('Client callbacks', () => {
+    let tested;
     beforeEach(() => {
-        Client.prototype.emit = jest.fn();
-        jest.spyOn(Client.prototype, 'getMe');
-        jest.spyOn(Client.prototype, 'getPreferences');
-        jest.spyOn(Client.prototype, 'getTeams');
-        jest.spyOn(Client.prototype, 'reconnect');
-        jest.spyOn(Client.prototype, 'loadUsers');
-        jest.spyOn(Client.prototype, 'loadChannels');
-        jest.spyOn(Client.prototype, 'connect');
-        jest.spyOn(Client.prototype, '_send');
+        jest.useFakeTimers();
+        tested = new Client(SERVER_URL, 'dummy', {});
+        jest.spyOn(tested, 'getMe');
+        jest.spyOn(tested, 'getPreferences');
+        jest.spyOn(tested, 'getTeams');
+        jest.spyOn(tested, 'reconnect');
+        jest.spyOn(tested, 'loadUsers');
+        jest.spyOn(tested, 'loadChannels');
+        jest.spyOn(tested, 'connect');
+        jest.spyOn(tested, '_send');
     });
 
     describe('_onLogin', () => {
         test('should reconnect when bad data', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLogin({}, {});
 
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
             expect(tested.authenticated).toBeFalsy();
             expect(tested._reconnecting).toBeTruthy();
         });
 
         test('should reconnect when null data', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLogin(null, {});
 
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
-            expect(Client.prototype.emit).toHaveBeenCalledWith('error', null);
+            expect(tested.reconnect).toHaveBeenCalled();
+            expect(tested.emit).toHaveBeenCalledWith('error', null);
             expect(tested.authenticated).toBeFalsy();
             expect(tested._reconnecting).toBeTruthy();
         });
 
         test('should retrieve info when success', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLogin({ id: 'obiwan' }, {});
 
-            expect(Client.prototype.reconnect).not.toHaveBeenCalled();
-            expect(Client.prototype.emit).toHaveBeenCalledWith('loggedIn', expect.objectContaining({ id: 'obiwan' }));
+            expect(tested.reconnect).not.toHaveBeenCalled();
+            expect(tested.emit).toHaveBeenCalledWith('loggedIn', expect.objectContaining({ id: 'obiwan' }));
             expect(tested.socketUrl).toEqual(`wss://${SERVER_URL}/api/v4/websocket`);
             expect(tested.self).toEqual({ id: 'obiwan' });
             expect(tested.authenticated).toBeTruthy();
@@ -98,33 +101,27 @@ describe('Client callbacks', () => {
     describe('_onLoadUser(s)', () => {
         const PRELOADED_USERS = { obiwan: { id: 'obiwan' }, yoda: { id: 'yoda' } };
         test('should failed on bad data', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLoadUsers(null, null, null);
-            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
+            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
         });
 
         test('should load users', () => {
-            Client.prototype.loadUsers = jest.fn();
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: null });
-            expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
+            expect(tested.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
             expect(tested.users).toEqual(PRELOADED_USERS);
-            expect(Client.prototype.loadUsers).not.toHaveBeenCalled();
+            expect(tested.loadUsers).not.toHaveBeenCalled();
         });
 
         test('should load multipage users', () => {
-            Client.prototype.loadUsers = jest.fn();
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: 1 });
-            expect(Client.prototype.loadUsers).toHaveBeenCalledWith(2);
+            expect(tested.loadUsers).toHaveBeenCalledWith(2);
         });
 
         test('should load user', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested.users = PRELOADED_USERS;
             tested._onLoadUser({ id: 'luke' }, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
+            expect(tested.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
             expect(tested.users).toEqual(expect.objectContaining({
                 ...PRELOADED_USERS,
                 luke: { id: 'luke' },
@@ -132,7 +129,6 @@ describe('Client callbacks', () => {
         });
 
         test('should fail load user', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested.emit = jest.fn();
             tested.users = PRELOADED_USERS;
             tested._onLoadUser({ error: 'No jedi available' }, null, null);
@@ -145,17 +141,15 @@ describe('Client callbacks', () => {
     describe('_onChannels', () => {
         const SAMPLE_CHANNELS = { jedi: { id: 'jedi' }, sith: { id: 'sith' } };
         test('should fail receive channels', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onChannels({ error: 'No jedi available' }, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
+            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
         });
 
         test('should receive channels', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onChannels([{ id: 'jedi' }, { id: 'sith' }], null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('channelsLoaded', expect.anything());
+            expect(tested.emit).toHaveBeenCalledWith('channelsLoaded', expect.anything());
             expect(tested.channels).toEqual(SAMPLE_CHANNELS);
         });
     });
@@ -168,17 +162,15 @@ describe('Client callbacks', () => {
             value: 'Kenobi',
         };
         test('should fail receive preferences', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onPreferences({ error: 'error' }, null, null);
 
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
         });
 
         test('should receive preferences', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onPreferences(SAMPLE_PREFERENCES, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('preferencesLoaded', expect.anything());
+            expect(tested.emit).toHaveBeenCalledWith('preferencesLoaded', expect.anything());
             expect(tested.preferences).toEqual(SAMPLE_PREFERENCES);
         });
     });
@@ -189,17 +181,15 @@ describe('Client callbacks', () => {
             category: 'user',
         };
         test('should fail receive me', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onMe({ error: 'error' }, null, null);
 
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
         });
 
         test('should receive me', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onMe(SAMPLE_ME, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('meLoaded', expect.anything());
+            expect(tested.emit).toHaveBeenCalledWith('meLoaded', expect.anything());
             expect(tested.me).toEqual(SAMPLE_ME);
         });
     });
@@ -210,26 +200,23 @@ describe('Client callbacks', () => {
             name: 'Light Side',
         }];
         test('should fail receive teams', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onTeams({ error: 'error' }, null, null);
 
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
         });
 
         test('should receive teams', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested._onTeams(SAMPLE_TEAMS, null, null);
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('teamsLoaded', expect.anything());
-            expect(Client.prototype.loadUsers).toHaveBeenCalled();
-            expect(Client.prototype.loadChannels).toHaveBeenCalled();
-            expect(Client.prototype.connect).toHaveBeenCalled();
+            expect(tested.emit).toHaveBeenCalledWith('teamsLoaded', expect.anything());
+            expect(tested.loadUsers).toHaveBeenCalled();
+            expect(tested.loadChannels).toHaveBeenCalled();
+            expect(tested.connect).toHaveBeenCalled();
             expect(tested.teams).toEqual(SAMPLE_TEAMS);
             expect(tested.teamID).toBeFalsy();
         });
 
         test('should receive teams', () => {
-            const tested = new Client(SERVER_URL, 'dummy', {});
             tested.group = 'Light Side';
             tested._onTeams(SAMPLE_TEAMS, null, null);
             expect(tested.teamID).toBeTruthy();
