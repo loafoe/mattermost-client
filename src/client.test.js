@@ -335,7 +335,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     describe('connect websocket handlers', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
         beforeEach(() => {
-            tested.emit = jest.fn();
             tested.connect();
             jest.spyOn(tested, '_send');
         });
@@ -364,15 +363,15 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            jest.spyOn(Client.prototype, 'reconnect').mockImplementation(() => {});
-            jest.spyOn(Client.prototype, '_send');
+            jest.spyOn(tested, 'reconnect').mockImplementation(() => {});
+            jest.spyOn(tested, '_send');
             tested.connect();
             const onCall = WebSocketMock.prototype.on.mock.calls[1];
             expect(onCall[0]).toEqual('open');
             jest.useFakeTimers();
             jest.clearAllTimers();
             onCall[1]();
-            Client.prototype._send.mockReset();
+            tested._send.mockReset();
         });
 
         test('should ping pong', () => {
@@ -381,14 +380,14 @@ describe('Connect / Reconnect / Disconnect', () => {
             tested.connected = true;
             tested._lastPong = Date.now() - 1;
             jest.runOnlyPendingTimers();
-            expect(Client.prototype._send).toHaveBeenCalledWith({ action: 'ping' });
+            expect(tested._send).toHaveBeenCalledWith({ action: 'ping' });
         });
 
         test('should reconnect if note connected', () => {
             expect(setInterval).toBeCalled();
             tested.connected = false;
             jest.runOnlyPendingTimers();
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
         });
 
         test('should reconnect if last ping too late', () => {
@@ -396,7 +395,7 @@ describe('Connect / Reconnect / Disconnect', () => {
             tested.connected = true;
             tested._lastPong = Date.now() - (3 * tested._pingInterval);
             jest.runOnlyPendingTimers();
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.reconnect).toHaveBeenCalled();
         });
     });
 
@@ -404,7 +403,7 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            jest.spyOn(Client.prototype, 'reconnect').mockImplementation(() => {});
+            jest.spyOn(tested, 'reconnect').mockImplementation(() => {});
             tested.connect();
         });
 
@@ -415,8 +414,8 @@ describe('Connect / Reconnect / Disconnect', () => {
             expect(onCall[0]).toEqual('close');
             onCall[1](200, 'obiwan');
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
-            expect(Client.prototype.reconnect).not.toHaveBeenCalled();
+            expect(tested.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
+            expect(tested.reconnect).not.toHaveBeenCalled();
             expect(tested.connected).toBeFalsy();
         });
 
@@ -427,8 +426,8 @@ describe('Connect / Reconnect / Disconnect', () => {
             expect(onCall[0]).toEqual('close');
             onCall[1](200, 'obiwan');
 
-            expect(Client.prototype.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
-            expect(Client.prototype.reconnect).toHaveBeenCalled();
+            expect(tested.emit).toHaveBeenCalledWith('close', 200, 'obiwan');
+            expect(tested.reconnect).toHaveBeenCalled();
             expect(tested.connected).toBe(false);
         });
     });
