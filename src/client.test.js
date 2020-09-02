@@ -748,7 +748,7 @@ describe('Mattermost messaging', () => {
         expect(callback).toBeCalled();
     });
 
-    test.skip('should fail when react without self', () => {
+    test('should fail when react without self', () => {
         expect(tested.react('messageId', 'metal')).toBeFalsy();
     });
 
