@@ -367,7 +367,7 @@ class Client extends EventEmitter {
         switch (message.event) {
         case 'ping':
             // Deprecated
-            this.logger.info('ACK ping');
+            this.logger.debug('ACK ping');
             this._lastPong = Date.now();
             return this.emit('ping', message);
         case 'posted':
@@ -402,7 +402,7 @@ class Client extends EventEmitter {
         default:
             // Check for `pong` response
             if ((message.data ? message.data.text : undefined) && (message.data.text === 'pong')) {
-                this.logger.info('ACK ping (2)');
+                this.logger.debug('ACK ping (2)');
                 this._lastPong = Date.now();
                 return this.emit('ping', message);
             }
