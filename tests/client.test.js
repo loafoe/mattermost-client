@@ -1,10 +1,11 @@
 jest.mock('request');
 jest.mock('ws');
+jest.mock('log');
 const requestMock = require('request');
 const WebSocketMock = require('ws');
 
-const Client = require('./client');
-const User = require('./user');
+const Client = require('../src/client');
+const User = require('../src/user');
 
 const SERVER_URL = 'test.foo.bar';
 

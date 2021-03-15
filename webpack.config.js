@@ -10,12 +10,12 @@ module.exports = {
             type: 'umd',
         },
     },
-    externals: [
-        'events',
-        'https-proxy-agent',
-        'log',
-        'request',
-        'text-encoding',
-        'ws',
-    ],
+    externals: {
+        'events': 'commonjs2 events',
+        'https-proxy-agent': 'commonjs2 https-proxy-agent',
+        'log': 'commonjs2 log',
+        'request': 'commonjs2 request',
+        'text-encoding': 'commonjs2 text-encoding',
+        'ws': 'commonjs2 ws',
+    },
 };
