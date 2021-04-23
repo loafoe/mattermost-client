@@ -27,11 +27,10 @@ describe('Mattermost login ...', () => {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
             }),
-            json: {
+            json: expect.objectContaining({
                 login_id: 'obiwan.kenobi@jedi.org',
-                password: 'password',
                 token: null,
-            },
+            }),
             method: 'POST',
             rejectUnauthorized: true,
             uri: `https://${SERVER_URL}/api/v4/users/login`,
@@ -89,50 +88,50 @@ describe('Client callbacks', () => {
         });
 
         test('should retrieve info when success', () => {
-            tested._onLogin({ id: 'obiwan' }, {});
+            tested._onLogin({id: 'obiwan'}, {});
 
             expect(tested.reconnect).not.toHaveBeenCalled();
-            expect(tested.emit).toHaveBeenCalledWith('loggedIn', expect.objectContaining({ id: 'obiwan' }));
+            expect(tested.emit).toHaveBeenCalledWith('loggedIn', expect.objectContaining({id: 'obiwan'}));
             expect(tested.socketUrl).toEqual(`wss://${SERVER_URL}/api/v4/websocket`);
-            expect(tested.self).toEqual({ id: 'obiwan' });
+            expect(tested.self).toEqual({id: 'obiwan'});
             expect(tested.authenticated).toBeTruthy();
         });
     });
 
     describe('_onLoadUser(s)', () => {
-        const PRELOADED_USERS = { obiwan: { id: 'obiwan' }, yoda: { id: 'yoda' } };
+        const PRELOADED_USERS = {obiwan: {id: 'obiwan'}, yoda: {id: 'yoda'}};
         test('should failed on bad data', () => {
             tested._onLoadUsers(null, null, null);
-            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
+            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({msg: expect.anything()}));
         });
 
         test('should load users', () => {
-            tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: null });
+            tested._onLoadUsers([{id: 'obiwan'}, {id: 'yoda'}], null, {page: null});
             expect(tested.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
             expect(tested.users).toEqual(PRELOADED_USERS);
             expect(tested.loadUsers).not.toHaveBeenCalled();
         });
 
         test('should load multipage users', () => {
-            tested._onLoadUsers([{ id: 'obiwan' }, { id: 'yoda' }], null, { page: 1 });
+            tested._onLoadUsers([{id: 'obiwan'}, {id: 'yoda'}], null, {page: 1});
             expect(tested.loadUsers).toHaveBeenCalledWith(2);
         });
 
         test('should load user', () => {
             tested.users = PRELOADED_USERS;
-            tested._onLoadUser({ id: 'luke' }, null, null);
+            tested._onLoadUser({id: 'luke'}, null, null);
 
             expect(tested.emit).toHaveBeenCalledWith('profilesLoaded', expect.anything());
             expect(tested.users).toEqual(expect.objectContaining({
                 ...PRELOADED_USERS,
-                luke: { id: 'luke' },
+                luke: {id: 'luke'},
             }));
         });
 
         test('should fail load user', () => {
             tested.emit = jest.fn();
             tested.users = PRELOADED_USERS;
-            tested._onLoadUser({ error: 'No jedi available' }, null, null);
+            tested._onLoadUser({error: 'No jedi available'}, null, null);
 
             expect(tested.emit).not.toHaveBeenCalled();
             expect(tested.users).toEqual(PRELOADED_USERS);
@@ -140,15 +139,15 @@ describe('Client callbacks', () => {
     });
 
     describe('_onChannels', () => {
-        const SAMPLE_CHANNELS = { jedi: { id: 'jedi' }, sith: { id: 'sith' } };
+        const SAMPLE_CHANNELS = {jedi: {id: 'jedi'}, sith: {id: 'sith'}};
         test('should fail receive channels', () => {
-            tested._onChannels({ error: 'No jedi available' }, null, null);
+            tested._onChannels({error: 'No jedi available'}, null, null);
 
-            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({ msg: expect.anything() }));
+            expect(tested.emit).toHaveBeenCalledWith('error', expect.objectContaining({msg: expect.anything()}));
         });
 
         test('should receive channels', () => {
-            tested._onChannels([{ id: 'jedi' }, { id: 'sith' }], null, null);
+            tested._onChannels([{id: 'jedi'}, {id: 'sith'}], null, null);
 
             expect(tested.emit).toHaveBeenCalledWith('channelsLoaded', expect.anything());
             expect(tested.channels).toEqual(SAMPLE_CHANNELS);
@@ -163,7 +162,7 @@ describe('Client callbacks', () => {
             value: 'Kenobi',
         };
         test('should fail receive preferences', () => {
-            tested._onPreferences({ error: 'error' }, null, null);
+            tested._onPreferences({error: 'error'}, null, null);
 
             expect(tested.reconnect).toHaveBeenCalled();
         });
@@ -182,7 +181,7 @@ describe('Client callbacks', () => {
             category: 'user',
         };
         test('should fail receive me', () => {
-            tested._onMe({ error: 'error' }, null, null);
+            tested._onMe({error: 'error'}, null, null);
 
             expect(tested.reconnect).toHaveBeenCalled();
         });
@@ -201,7 +200,7 @@ describe('Client callbacks', () => {
             name: 'Light Side',
         }];
         test('should fail receive teams', () => {
-            tested._onTeams({ error: 'error' }, null, null);
+            tested._onTeams({error: 'error'}, null, null);
 
             expect(tested.reconnect).toHaveBeenCalled();
         });
@@ -353,7 +352,7 @@ describe('Connect / Reconnect / Disconnect', () => {
             expect(tested.emit).toHaveBeenCalledWith('connected');
             expect(tested._send).toHaveBeenCalledWith(
                 {
-                    action: 'authentication_challenge', data: { token: null },
+                    action: 'authentication_challenge', data: {token: null},
                 },
             );
             expect(tested._pongTimeout).not.toBeNull();
@@ -364,7 +363,7 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            jest.spyOn(tested, 'reconnect').mockImplementation(() => {});
+            jest.spyOn(tested, 'reconnect').mockImplementation();
             jest.spyOn(tested, '_send');
             tested.connect();
             const onCall = WebSocketMock.prototype.on.mock.calls[1];
@@ -381,7 +380,7 @@ describe('Connect / Reconnect / Disconnect', () => {
             tested.connected = true;
             tested._lastPong = Date.now() - 1;
             jest.runOnlyPendingTimers();
-            expect(tested._send).toHaveBeenCalledWith({ action: 'ping' });
+            expect(tested._send).toHaveBeenCalledWith({action: 'ping'});
         });
 
         test('should reconnect if note connected', () => {
@@ -404,7 +403,7 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            jest.spyOn(tested, 'reconnect').mockImplementation(() => {});
+            jest.spyOn(tested, 'reconnect').mockImplementation();
             tested.connect();
         });
 
@@ -513,10 +512,10 @@ describe('Mattermost Message reciever', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
 
     test('should receive post', () => {
-        tested.onMessage({ event: 'ping' });
+        tested.onMessage({event: 'ping'});
         expect(tested.emit).toHaveBeenCalledWith('ping', expect.anything());
 
-        tested.onMessage({ data: { text: 'pong' } });
+        tested.onMessage({data: {text: 'pong'}});
         expect(tested.emit).toHaveBeenCalledWith('ping', expect.anything());
     });
 
@@ -544,18 +543,18 @@ describe('Mattermost Message reciever', () => {
         'status_change',
         'webrtc',
     ])('should receive %s events', (eventName) => {
-        tested.onMessage({ event: eventName });
+        tested.onMessage({event: eventName});
         expect(tested.emit).toHaveBeenCalledWith(eventName, expect.anything());
     });
 
     test('should receive posted events', () => {
-        tested.onMessage({ event: 'posted' });
+        tested.onMessage({event: 'posted'});
         expect(tested.emit).toHaveBeenCalledWith('message', expect.anything());
     });
 
     test('should receive new user events', () => {
         jest.spyOn(tested, 'loadUser');
-        tested.onMessage({ event: 'new_user', data: { user_id: 'obiwan' } });
+        tested.onMessage({event: 'new_user', data: {user_id: 'obiwan'}});
         expect(tested.emit).toHaveBeenCalledWith('new_user', expect.anything());
         expect(tested.loadUser).toHaveBeenCalledWith('obiwan');
     });
@@ -564,14 +563,14 @@ describe('Mattermost Message reciever', () => {
 describe('Basic Getters', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
     const CHANNELS_SAMPLE = {
-        jedi: { id: 'jedi', name: 'jedi' },
-        sith: { id: 'sith', name: 'sith' },
-        yobiwan: { id: 'yobiwan', name: 'yoda__obiwan' },
+        jedi: {id: 'jedi', name: 'jedi'},
+        sith: {id: 'sith', name: 'sith'},
+        yobiwan: {id: 'yobiwan', name: 'yoda__obiwan'},
     };
     beforeEach(() => {
         tested.users = {
-            obiwan: { id: 'obiwan', email: 'obiwan.kenobi@jedi.com' },
-            yoda: { id: 'yoda', email: 'yoda@jedi.com' },
+            obiwan: {id: 'obiwan', email: 'obiwan.kenobi@jedi.com'},
+            yoda: {id: 'yoda', email: 'yoda@jedi.com'},
         };
         tested.self = new User(tested.users.obiwan);
         tested.channels = CHANNELS_SAMPLE;
@@ -589,16 +588,20 @@ describe('Basic Getters', () => {
 
     test('should get existing direct user channel', () => {
         let actual;
-        tested.getUserDirectMessageChannel('yoda', (channel) => { actual = channel; });
-        expect(actual).toEqual(expect.objectContaining({ id: 'yobiwan' }));
+        tested.getUserDirectMessageChannel('yoda', (channel) => {
+            actual = channel;
+        });
+        expect(actual).toEqual(expect.objectContaining({id: 'yobiwan'}));
     });
 
     test('should get non existing direct user channel', () => {
         let actual;
-        jest.spyOn(tested, 'createDirectChannel').mockImplementation((userId, callback) => callback({ id: 'libiwan' }));
-        tested.getUserDirectMessageChannel('luke', (channel) => { actual = channel; });
+        jest.spyOn(tested, 'createDirectChannel').mockImplementation((userId, callback) => callback({id: 'libiwan'}));
+        tested.getUserDirectMessageChannel('luke', (channel) => {
+            actual = channel;
+        });
         expect(tested.createDirectChannel).toBeCalled();
-        expect(actual).toEqual(expect.objectContaining({ id: 'libiwan' }));
+        expect(actual).toEqual(expect.objectContaining({id: 'libiwan'}));
     });
 
     test('should get channels', () => {
@@ -606,11 +609,11 @@ describe('Basic Getters', () => {
     });
 
     test('should get channel by id', () => {
-        expect(tested.getChannelByID('jedi')).toEqual({ id: 'jedi', name: 'jedi' });
+        expect(tested.getChannelByID('jedi')).toEqual({id: 'jedi', name: 'jedi'});
     });
 
     test('should find channel by name', () => {
-        expect(tested.findChannelByName('sith')).toEqual({ id: 'sith', name: 'sith' });
+        expect(tested.findChannelByName('sith')).toEqual({id: 'sith', name: 'sith'});
     });
 
     test('should chunck message', () => {
@@ -621,15 +624,15 @@ describe('Basic Getters', () => {
 describe('Mattermost messaging', () => {
     const tested = new Client(SERVER_URL, 'dummy', {});
     beforeEach(() => {
-        tested.self = new User({ id: 'obiwan', email: 'obiwan.kenobi@jedi.com' });
+        tested.self = new User({id: 'obiwan', email: 'obiwan.kenobi@jedi.com'});
         tested.teamID = 'jedi';
         jest.spyOn(tested, '_apiCall');
     });
 
     test('should send custom message', () => {
-        tested.customMessage({ message: 'The Force will be with you' }, 'jedi');
+        tested.customMessage({message: 'The Force will be with you'}, 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            json: { channel_id: 'jedi', message: 'The Force will be with you' },
+            json: {channel_id: 'jedi', message: 'The Force will be with you'},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
         }), expect.anything());
@@ -639,9 +642,9 @@ describe('Mattermost messaging', () => {
 
     test('should send very long message', () => {
         const veryLongMessage = 'x'.repeat(5000);
-        tested.customMessage({ message: veryLongMessage }, 'jedi');
+        tested.customMessage({message: veryLongMessage}, 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            json: { channel_id: 'jedi', message: 'x'.repeat(4000) },
+            json: {channel_id: 'jedi', message: 'x'.repeat(4000)},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
         }), expect.anything());
@@ -650,7 +653,7 @@ describe('Mattermost messaging', () => {
         callback('', '');
 
         expect(requestMock).toHaveBeenLastCalledWith(expect.objectContaining({
-            json: { channel_id: 'jedi', message: 'x'.repeat(1000) },
+            json: {channel_id: 'jedi', message: 'x'.repeat(1000)},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
         }), expect.anything());
@@ -660,7 +663,11 @@ describe('Mattermost messaging', () => {
         tested.postMessage('The Force will be with you', 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: {
-                channel_id: 'jedi', create_at: 0, file_ids: [], message: 'The Force will be with you', user_id: 'obiwan',
+                channel_id: 'jedi',
+                create_at: 0,
+                file_ids: [],
+                message: 'The Force will be with you',
+                user_id: 'obiwan',
             },
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/posts',
@@ -670,14 +677,18 @@ describe('Mattermost messaging', () => {
     });
 
     test('should post complex message', () => {
-        tested.postMessage({ message: 'The Force will be with you', props: { type: 'bold' }, file_ids: ['obiwan.xml'] }, 'jedi');
+        tested.postMessage({
+            message: 'The Force will be with you',
+            props: {type: 'bold'},
+            file_ids: ['obiwan.xml']
+        }, 'jedi');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: {
                 channel_id: 'jedi',
                 create_at: 0,
                 file_ids: ['obiwan.xml'],
                 message: 'The Force will be with you',
-                props: { type: 'bold' },
+                props: {type: 'bold'},
                 user_id: 'obiwan',
             },
             method: 'POST',
@@ -717,7 +728,7 @@ describe('Mattermost messaging', () => {
         });
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
             json: {
-                dialog: { callback_id: 'string', title: 'string' },
+                dialog: {callback_id: 'string', title: 'string'},
                 trigger_id: 'dialogId',
                 url: 'https://blog.i-run.si',
             },
@@ -729,7 +740,7 @@ describe('Mattermost messaging', () => {
     test('should edit post', () => {
         tested.editPost('postId', 'The Force will be with you, always');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            json: { id: 'postId', message: 'The Force will be with you, always' },
+            json: {id: 'postId', message: 'The Force will be with you, always'},
             method: 'PUT',
             uri: 'https://test.foo.bar/api/v4/posts/postId',
         }), expect.anything());
@@ -739,7 +750,7 @@ describe('Mattermost messaging', () => {
         const callback = jest.fn();
         tested.uploadFile('postId', 'The Force will be with you, always', callback);
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            formData: { channel_id: 'postId', files: 'The Force will be with you, always' },
+            formData: {channel_id: 'postId', files: 'The Force will be with you, always'},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/files',
         }), expect.anything());
@@ -795,7 +806,7 @@ describe('Mattermost messaging', () => {
     test('should set channel header', () => {
         tested.setChannelHeader('channelId', 'May The 4th');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            json: { channel_id: 'channelId', channel_header: 'May The 4th' },
+            json: {channel_id: 'channelId', channel_header: 'May The 4th'},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/users/me/teams/jedi/channels/update_header',
         }), expect.anything());
@@ -807,7 +818,7 @@ describe('Mattermost messaging', () => {
     test('should post command', () => {
         tested.postCommand('channelId', '/command');
         expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-            json: { channel_id: 'channelId', command: '/command' },
+            json: {channel_id: 'channelId', command: '/command'},
             method: 'POST',
             uri: 'https://test.foo.bar/api/v4/commands/execute',
         }), expect.anything());
@@ -825,14 +836,14 @@ describe('Private methods', () => {
     });
 
     test('should send through websocket', () => {
-        const actual = tested._send({ id: 'ID', text: 'May the 4th' });
+        const actual = tested._send({id: 'ID', text: 'May the 4th'});
         expect(actual).not.toBeFalsy();
         expect(tested.ws.send).toHaveBeenCalledWith('{"id":1,"text":"May the 4th","seq":1}');
     });
 
     test('should fail to send when not connected', () => {
         tested.connected = false;
-        const actual = tested._send({ id: 'ID', text: 'May the 4th' });
+        const actual = tested._send({id: 'ID', text: 'May the 4th'});
         expect(actual).toBeFalsy();
         expect(tested.ws.send).not.toHaveBeenCalled();
     });
@@ -843,8 +854,8 @@ describe('Private methods', () => {
         expect(requestMock).toHaveBeenCalled();
 
         const requestCallArgs = requestMock.mock.calls[0];
-        requestCallArgs[1]({ errno: 404, msg: 'error message' }, null, null);
-        expect(callback).toHaveBeenCalledWith({ error: 404, id: null }, {}, {});
+        requestCallArgs[1]({errno: 404, msg: 'error message'}, null, null);
+        expect(callback).toHaveBeenCalledWith({error: 404, id: null}, {}, {});
     });
 
     test('should call api with status error', () => {
@@ -853,10 +864,13 @@ describe('Private methods', () => {
         expect(requestMock).toHaveBeenCalled();
 
         const requestCallArgs = requestMock.mock.calls[0];
-        requestCallArgs[1](null, { statusCode: 404, headers: { Content: 'application/json' } }, '{"id":1,"text":"May the 4th","seq":1}');
+        requestCallArgs[1](null, {
+            statusCode: 404,
+            headers: {Content: 'application/json'}
+        }, '{"id":1,"text":"May the 4th","seq":1}');
         expect(callback).toHaveBeenCalledWith(
-            { error: 'API response: 404 "{\\"id\\":1,\\"text\\":\\"May the 4th\\",\\"seq\\":1}"', id: null },
-            { Content: 'application/json' }, {},
+            {error: 'API response: 404 "{\\"id\\":1,\\"text\\":\\"May the 4th\\",\\"seq\\":1}"', id: null},
+            {Content: 'application/json'}, {},
         );
     });
 
@@ -866,9 +880,12 @@ describe('Private methods', () => {
         expect(requestMock).toHaveBeenCalled();
 
         const requestCallArgs = requestMock.mock.calls[0];
-        requestCallArgs[1](null, { statusCode: 200, headers: { Content: 'application/json' } }, '{"id":1,"text":"May the 4th","seq":1}');
+        requestCallArgs[1](null, {
+            statusCode: 200,
+            headers: {Content: 'application/json'}
+        }, '{"id":1,"text":"May the 4th","seq":1}');
         expect(callback).toHaveBeenCalledWith(
-            { id: 1, seq: 1, text: 'May the 4th' }, { Content: 'application/json' }, {},
+            {id: 1, seq: 1, text: 'May the 4th'}, {Content: 'application/json'}, {},
         );
     });
 });

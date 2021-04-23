@@ -8,8 +8,8 @@
     "/dist"
   ],
   "scripts": {
-    "test": "node_modules/.bin/jest",
-    "lint": "node_modules/.bin/eslint src",
+    "test": "jest",
+    "lint": "eslint src",
     "build:dev": "webpack --mode=development",
     "build:prod": "webpack --mode=production",
     "prepublishOnly": "npm run build:prod"
