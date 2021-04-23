@@ -9,6 +9,7 @@ module.exports = {
             name: 'MatterMostClient',
             type: 'umd',
         },
+        globalObject: 'this',
     },
     externals: {
         'events': 'commonjs2 events',
