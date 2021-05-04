@@ -17,7 +17,21 @@ const messageMaxRunes = 4000;
 const tlsverify = !(process.env.MATTERMOST_TLS_VERIFY || '').match(/^false|0|no|off$/i);
 const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i);
 
+/**
+ * @typedef {Object} ClientOptions
+ * @property {string} dm_channel_id Direct Message channel ID for user
+ * @property {number} wssPort The webSocket port, default 443
+ * @property {number} httpPort The http port, default 80
+ * @property {number} [pingInterval] The ping interval 60 000
+ * @property {boolean} [httpProxy] Is using an HTTP proxy, default false
+ * @property {Log} [logger]
+ * */
 class Client extends EventEmitter {
+    /**
+     * @param {string} host The mattermost host
+     * @param {string} group The mattermost group to connect
+     * @param {ClientOptions} options The options for Mattermost client
+     */
     constructor(host, group, options) {
         super();
         this.host = host;
@@ -53,7 +67,7 @@ class Client extends EventEmitter {
 
         this._connAttempts = 0;
 
-        this.logger = new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
+        this.logger = this.options.logger || new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
 
         // Binding because async calls galore
         this._onLogin = this._onLogin.bind(this);
