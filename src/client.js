@@ -17,7 +17,21 @@ const messageMaxRunes = 4000;
 const tlsverify = !(process.env.MATTERMOST_TLS_VERIFY || '').match(/^false|0|no|off$/i);
 const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i);
 
+/**
+ * @typedef {Object} ClientOptions
+ * @property {string} dm_channel_id Direct Message channel ID for user
+ * @property {number} wssPort The webSocket port, default 443
+ * @property {number} httpPort The http port, default 80
+ * @property {number} [pingInterval] The ping interval 60 000
+ * @property {boolean} [httpProxy] Is using an HTTP proxy, default false
+ * @property {Log} [logger]
+ * */
 class Client extends EventEmitter {
+    /**
+     * @param {string} host The mattermost host
+     * @param {string} group The mattermost group to connect
+     * @param {ClientOptions} options The options for Mattermost client
+     */
     constructor(host, group, options) {
         super();
         this.host = host;
@@ -53,7 +67,7 @@ class Client extends EventEmitter {
 
         this._connAttempts = 0;
 
-        this.logger = new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
+        this.logger = this.options.logger || new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
 
         // Binding because async calls galore
         this._onLogin = this._onLogin.bind(this);
@@ -94,7 +108,7 @@ class Client extends EventEmitter {
     _onLogin(data, headers) {
         if (data) {
             if (!data.id) {
-                this.logger.error('Login call failed', JSON.stringify(data));
+                this.logger.error('Login call failed %j', data);
                 this.authenticated = false;
                 this._reconnecting = false;
                 return this.reconnect();
@@ -106,7 +120,7 @@ class Client extends EventEmitter {
             }
             // TODO: split into multiple lines
             this.socketUrl = this._getSocketUrl();
-            this.logger.info(`Websocket URL: ${this.socketUrl}`);
+            this.logger.info('Websocket URL: %s', this.socketUrl);
             this.self = new User(data);
             this.emit('loggedIn', this.self);
             this.getMe();
@@ -128,7 +142,7 @@ class Client extends EventEmitter {
     _onLoadUsers(data, _headers, params) {
         if (data && !data.error) {
             data.forEach((user) => { this.users[user.id] = user; });
-            this.logger.info(`Found ${Object.keys(data).length} profiles.`);
+            this.logger.info('Found %d profiles.', Object.keys(data).length);
             const dataEmitted = this.emit('profilesLoaded', data);
             if ((Object.keys(data).length > 0) && (params.page != null)) {
                 return this.loadUsers(params.page + 1); // Trigger next page loading
@@ -150,10 +164,10 @@ class Client extends EventEmitter {
     _onChannels(data, _headers, _params) {
         if (data && !data.error) {
             data.forEach((channel) => { this.channels[channel.id] = channel; });
-            this.logger.info(`Found ${Object.keys(data).length} subscribed channels.`);
+            this.logger.info('Found %d subscribed channels.', Object.keys(data).length);
             return this.emit('channelsLoaded', data);
         }
-        this.logger.error(`Failed to get subscribed channels list from server: ${data.error}`);
+        this.logger.error('Failed to get subscribed channels list from server: %j', data.error);
         return this.emit('error', { msg: 'failed to get channel list' });
     }
 
@@ -163,7 +177,7 @@ class Client extends EventEmitter {
             this.emit('preferencesLoaded', data);
             return this.logger.info('Loaded Preferences...');
         }
-        this.logger.error(`Failed to load Preferences...${data.error}`);
+        this.logger.error('Failed to load Preferences... %j', data.error);
         return this.reconnect();
     }
 
@@ -173,7 +187,7 @@ class Client extends EventEmitter {
             this.emit('meLoaded', data);
             return this.logger.info('Loaded Me...');
         }
-        this.logger.error(`Failed to load Me...${data.error}`);
+        this.logger.error('Failed to load Me... %j', data.error);
         return this.reconnect();
     }
 
@@ -181,11 +195,11 @@ class Client extends EventEmitter {
         if (data && !data.error) {
             this.teams = data;
             this.emit('teamsLoaded', data);
-            this.logger.info(`Found ${Object.keys(this.teams).length} teams.`);
+            this.logger.info('Found %d teams.', Object.keys(this.teams).length);
             for (const team of this.teams) {
-                this.logger.debug(`Testing ${team.name} == ${this.group}`);
+                this.logger.debug('Testing %s == %s', team.name, this.group);
                 if (team.name.toLowerCase() === this.group.toLowerCase()) {
-                    this.logger.info(`Found team! ${team.id}`);
+                    this.logger.info('Found team: %s', team.id);
                     this.teamID = team.id;
                     break;
                 }
@@ -208,37 +222,37 @@ class Client extends EventEmitter {
 
     getMe() {
         const uri = `${usersRoute}/me`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onMe);
     }
 
     getPreferences() {
         const uri = `${usersRoute}/me/preferences`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onPreferences);
     }
 
     getTeams() {
         const uri = `${usersRoute}/me/teams`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onTeams);
     }
 
     loadUsers(page = 0) {
         const uri = `/users?page=${page}&per_page=200&in_team=${this.teamID}`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onLoadUsers, { page });
     }
 
     loadUser(user_id) {
         const uri = `/users/${user_id}`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onLoadUser, {});
     }
 
     loadChannels() {
         const uri = `/users/me/teams/${this.teamID}/channels`;
-        this.logger.info(`Loading ${uri}`);
+        this.logger.debug('Loading %s', uri);
         return this._apiCall('GET', uri, null, this._onChannels);
     }
 
@@ -293,7 +307,7 @@ class Client extends EventEmitter {
                     this.reconnect();
                     return;
                 }
-                this.logger.info('ping');
+                this.logger.debug('ping');
                 this._send({ action: 'ping' });
             },
             this._pingInterval);
@@ -316,7 +330,7 @@ class Client extends EventEmitter {
 
     reconnect() {
         if (this._reconnecting) {
-            this.logger.info('WARNING: Already reconnecting.');
+            this.logger.warning('WARNING: Already reconnecting.');
             return false;
         }
         this._connecting = false;
@@ -457,7 +471,7 @@ class Client extends EventEmitter {
         return this._apiCall('POST', '/posts', preparedData, (_data, _headers) => {
             this.logger.debug('Posted custom message.');
             if ((chunks != null ? chunks.length : undefined) > 0) {
-                this.logger.debug(`Recursively posting remainder of customMessage: (${chunks.length})`);
+                this.logger.debug('Recursively posting remainder of customMessage: (%d)', chunks.length);
                 preparedData.message = chunks.join();
                 return this.customMessage(preparedData, channelID);
             }
@@ -576,7 +590,7 @@ class Client extends EventEmitter {
             this.logger.debug('Posted message.');
 
             if ((chunks != null ? chunks.length : undefined) > 0) {
-                this.logger.debug(`Recursively posting remainder of message: (${(chunks != null ? chunks.length : undefined)})`);
+                this.logger.debug('Recursively posting remainder of message: (%d)', (chunks != null ? chunks.length : undefined));
                 return this.postMessage(chunks.join(), channelID);
             }
 
@@ -657,8 +671,8 @@ class Client extends EventEmitter {
             options.formData = params;
         }
 
-        this.logger.debug(`${safeMethod} ${path}`);
-        this.logger.info(`api url:${options.uri}`);
+        this.logger.debug('%s %s', safeMethod, path);
+        this.logger.debug('api url: %s', options.uri);
 
         return request(options, (error, res, value) => {
             if (error) {
