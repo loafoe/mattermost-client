@@ -1,7 +1,7 @@
 const request = require('request');
 const WebSocket = require('ws');
 const TextEncoder = require('text-encoding');
-const Log = require('pino')();
+const log = require('log');
 const { EventEmitter } = require('events');
 const HttpsProxyAgent = require('https-proxy-agent');
 
@@ -67,7 +67,7 @@ class Client extends EventEmitter {
 
         this._connAttempts = 0;
 
-        this.logger = this.options.logger || Log;
+        this.logger = this.options.logger || log;
 
         // Binding because async calls galore
         this._onLogin = this._onLogin.bind(this);
