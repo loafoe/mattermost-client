@@ -1,6 +1,5 @@
 jest.mock('request');
 jest.mock('ws');
-jest.mock('log');
 const requestMock = require('request');
 const WebSocketMock = require('ws');
 
