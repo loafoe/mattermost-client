@@ -1,7 +1,7 @@
 const request = require('request');
 const WebSocket = require('ws');
 const TextEncoder = require('text-encoding');
-const Log = require('log');
+const Log = require('pino')();
 const { EventEmitter } = require('events');
 const HttpsProxyAgent = require('https-proxy-agent');
 
@@ -67,7 +67,7 @@ class Client extends EventEmitter {
 
         this._connAttempts = 0;
 
-        this.logger = this.options.logger || new Log(process.env.MATTERMOST_LOG_LEVEL || 'info');
+        this.logger = this.options.logger || Log;
 
         // Binding because async calls galore
         this._onLogin = this._onLogin.bind(this);
@@ -330,7 +330,7 @@ class Client extends EventEmitter {
 
     reconnect() {
         if (this._reconnecting) {
-            this.logger.warning('WARNING: Already reconnecting.');
+            this.logger.info('WARNING: Already reconnecting.');
             return false;
         }
         this._connecting = false;
