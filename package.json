@@ -36,6 +36,7 @@
     "https-proxy-agent": "^5.0.0",
     "log": "^6.1.0",
     "request": "^2.88.0",
+    "set-value": ">=4.0.1",
     "text-encoding": "^0.7.0",
     "ws": ">=3.3.1"
   },
