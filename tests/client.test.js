@@ -362,13 +362,14 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
+            jest.useFakeTimers();
+            jest.clearAllTimers();
+            jest.spyOn(global, 'setInterval');
             jest.spyOn(tested, 'reconnect').mockImplementation();
             jest.spyOn(tested, '_send');
             tested.connect();
             const onCall = WebSocketMock.prototype.on.mock.calls[1];
             expect(onCall[0]).toEqual('open');
-            jest.useFakeTimers();
-            jest.clearAllTimers();
             onCall[1]();
             tested._send.mockReset();
         });
@@ -433,6 +434,8 @@ describe('Connect / Reconnect / Disconnect', () => {
 
     test('should reconnect', () => {
         jest.useFakeTimers();
+        jest.spyOn(global, 'clearInterval');
+        jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
         this._reconnecting = false;
@@ -447,6 +450,8 @@ describe('Connect / Reconnect / Disconnect', () => {
 
     test('should avoid infinite reconnection', () => {
         jest.useFakeTimers();
+        jest.spyOn(global, 'clearInterval');
+        jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
         tested._reconnecting = true;
@@ -461,6 +466,8 @@ describe('Connect / Reconnect / Disconnect', () => {
 
     test('should login from reconnect', () => {
         jest.useFakeTimers();
+        jest.spyOn(global, 'clearInterval');
+        jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.login('obiwan.kenobi@jedi.com', 'the4th', null);
         jest.spyOn(tested, 'login');
@@ -496,6 +503,8 @@ describe('Connect / Reconnect / Disconnect', () => {
 
     test('should disconnect when connected', () => {
         jest.useFakeTimers();
+        jest.spyOn(global, 'clearInterval');
+
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
         const onCall = WebSocketMock.prototype.on.mock.calls[1];
