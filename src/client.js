@@ -124,6 +124,7 @@ class Client extends EventEmitter {
             this.self = new User(data);
             this.emit('loggedIn', this.self);
             this.getMe();
+            this.reconnect(); // Mattermost 6.2 requires a reconnect before getPreferences gets called
             this.getPreferences();
             return this.getTeams();
         }
