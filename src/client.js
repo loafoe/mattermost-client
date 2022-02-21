@@ -24,7 +24,7 @@ const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i
  * @property {number} httpPort The http port, default 80
  * @property {number} [pingInterval] The ping interval 60 000
  * @property {boolean} [httpProxy] Is using an HTTP proxy, default false
- * @property {Log} [logger]
+ * @property {Object} [logger]
  * */
 class Client extends EventEmitter {
     /**
@@ -172,13 +172,16 @@ class Client extends EventEmitter {
     }
 
     _onPreferences(data, _headers, _params) {
+        this.logger.debug('_onPreferences: (data && !data.error) => %d', (data && !data.error));
         if (data && !data.error) {
             this.preferences = data;
             this.emit('preferencesLoaded', data);
-            return this.logger.info('Loaded Preferences...');
+            this.logger.info('Loaded Preferences...');
+            return true;
+        } else if (data.error) {
+            this.logger.error('Failed to load Preferences... %j', data.error);
         }
-        this.logger.error('Failed to load Preferences... %j', data.error);
-        return this.reconnect();
+        return false;
     }
 
     _onMe(data, _headers, _params) {
@@ -227,9 +230,15 @@ class Client extends EventEmitter {
     }
 
     getPreferences() {
-        const uri = `${usersRoute}/me/preferences`;
-        this.logger.debug('Loading %s', uri);
-        return this._apiCall('GET', uri, null, this._onPreferences);
+        try {
+            const uri = `${usersRoute}/me/preferences`;
+            this.logger.debug('Loading %s', uri);
+            return this._apiCall('GET', uri, null, this._onPreferences);
+        } catch (e) {
+            this.preferences = {};
+            this.logger.warning('Unable to load preferences !');
+            return false;
+        }
     }
 
     getTeams() {
