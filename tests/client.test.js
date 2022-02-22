@@ -161,9 +161,17 @@ describe('Client callbacks', () => {
             value: 'Kenobi',
         };
         test('should fail receive preferences', () => {
-            tested._onPreferences({error: 'error'}, null, null);
+            let actual = tested._onPreferences({error: 'error'}, null, null);
 
-            expect(tested.reconnect).toHaveBeenCalled();
+            expect(actual).toBeFalsy();
+            expect(tested.reconnect).not.toHaveBeenCalled();
+        });
+
+        test('should fail receive preferences null', () => {
+            let actual = tested._onPreferences(null, null, null);
+
+            expect(actual).toBeFalsy();
+            expect(tested.reconnect).not.toHaveBeenCalled();
         });
 
         test('should receive preferences', () => {
