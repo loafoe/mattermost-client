@@ -167,6 +167,13 @@ describe('Client callbacks', () => {
             expect(tested.reconnect).not.toHaveBeenCalled();
         });
 
+        test('should fail receive preferences null', () => {
+            let actual = tested._onPreferences(null, null, null);
+
+            expect(actual).toBeFalsy();
+            expect(tested.reconnect).not.toHaveBeenCalled();
+        });
+
         test('should receive preferences', () => {
             tested._onPreferences(SAMPLE_PREFERENCES, null, null);
 

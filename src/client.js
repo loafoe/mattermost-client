@@ -172,14 +172,14 @@ class Client extends EventEmitter {
     }
 
     _onPreferences(data, _headers, _params) {
-        this.logger.debug('_onPreferences: (data && !data.error) => %d', (data && !data.error));
         if (data && !data.error) {
             this.preferences = data;
             this.emit('preferencesLoaded', data);
-            this.logger.info('Loaded Preferences...');
             return true;
-        } else if (data.error) {
+        } if (data && data.error) {
             this.logger.error('Failed to load Preferences... %j', data.error);
+        } else {
+            this.logger.error('Failed to load Preferences unexpected data... %j', data);
         }
         return false;
     }
