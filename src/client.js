@@ -592,6 +592,9 @@ class Client extends EventEmitter {
             if (msg.file_ids) {
                 postData.file_ids = msg.file_ids;
             }
+            if (msg.type) {
+                postData.type = msg.type;
+            }
         }
 
         // break apart long messages
