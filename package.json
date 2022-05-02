@@ -35,15 +35,18 @@
     "request": "^2.88.0",
     "set-value": ">=4.0.1",
     "text-encoding": "^0.7.0",
-    "ws": ">=3.3.1"
+    "ws": "^8.6.0"
   },
   "devDependencies": {
     "eslint": "^8.4.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.22.1",
-    "jest": "^27.3.1",
+    "jest": "^28.0.3",
     "jest-sonar-reporter": "^2.0.0",
     "webpack": "^5.35.0",
     "webpack-cli": "^4.6.0"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.2"
   }
 }
