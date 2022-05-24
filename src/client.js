@@ -501,6 +501,13 @@ class Client extends EventEmitter {
         });
     }
 
+    getPost(post_id, callback) {
+        return this._apiCall('GET', `/posts/${post_id}`, null, (data, _headers) => {
+            this.logger.debug('get post');
+            return callback(data);
+        });
+    }
+
     editPost(post_id, msg) {
         let postData = msg;
         if (typeof msg === 'string') {
