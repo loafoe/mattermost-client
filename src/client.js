@@ -521,6 +521,13 @@ class Client extends EventEmitter {
         });
     }
 
+    deletePost(post_id, callback) {
+        return this._apiCall('DELETE', `/posts/${post_id}`, null, (data, _headers) => {
+            this.logger.debug('Deleted post');
+            return callback && callback(data);
+        });
+    }
+
     uploadFile(channel_id, file, callback) {
         const formData = {
             channel_id,
