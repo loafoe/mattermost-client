@@ -567,6 +567,58 @@ class Client extends EventEmitter {
         });
     }
 
+    createChannel(channelData, teamID, callback) {
+        const postData = {
+            team_id: teamID,
+            name: channelData.name,
+            display_name: channelData.display_name,
+            type: channelData.type
+        };
+        if (channelData.purpose) {
+            postData.purpose = channelData.purpose;
+        }
+        if (channelData.header) {
+            postData.header = channelData.header;
+        }
+
+        return this._apiCall('POST', '/channels', postData, (data, _headers) => {
+            this.logger.info('Created Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
+    deleteChannel(channelID, callback) {
+        return this._apiCall('DELETE', `/channels/${channelID}`, null, (data, _headers) => {
+            this.logger.info('Deleted Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
+    addUserToChannel(channelID, userID, postRootId, callback) {
+        const postData = {
+            user_id: userID
+        };
+        if (postRootId) {
+            postData.post_root_id = postRootId;
+        }
+
+        return this._apiCall('POST', `/channels/${channelID}/members`, postData, (data, _headers) => {
+            this.logger.info('Added Member to Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
+    removeUserFromChannel(channelID, userID, callback) {
+        return this._apiCall('POST', `/channels/${channelID}/members/${userID}`, null, (data, _headers) => {
+            this.logger.info('Removed Member from Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
     findChannelByName(name) {
         const foundChannel = Object.keys(this.channels)
             .find((channel) => {
