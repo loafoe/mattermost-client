@@ -572,7 +572,7 @@ class Client extends EventEmitter {
             team_id: teamID,
             name: channelData.name,
             display_name: channelData.display_name,
-            type: channelData.type
+            type: channelData.type,
         };
         if (channelData.purpose) {
             postData.purpose = channelData.purpose;
@@ -587,7 +587,6 @@ class Client extends EventEmitter {
             return null;
         });
     }
-
 
     getChannelByName(channelName, teamID, callback) {
         return this._apiCall('GET', `/teams/${teamID}/channels/name/${channelName}`, null, (data, _headers) => {
@@ -606,7 +605,7 @@ class Client extends EventEmitter {
     }
 
     deleteChannel(channelID, permanent, callback) {
-        return this._apiCall('DELETE', `/channels/${channelID}${permanent && '?' + 'permanent=true'}`, null, (data, _headers) => {
+        return this._apiCall('DELETE', `/channels/${channelID}${permanent && '?permanent=true'}`, null, (data, _headers) => {
             this.logger.info('Deleted Channel.');
             if (callback != null) { return callback(data); }
             return null;
@@ -615,7 +614,7 @@ class Client extends EventEmitter {
 
     addUserToChannel(channelID, userID, postRootId, callback) {
         const postData = {
-            user_id: userID
+            user_id: userID,
         };
         if (postRootId) {
             postData.post_root_id = postRootId;
@@ -647,7 +646,7 @@ class Client extends EventEmitter {
     }
 
     logout(callback) {
-        return this._apiCall('POST', `/users/logout`, null, (data, _headers) => {
+        return this._apiCall('POST', '/users/logout', null, (data, _headers) => {
             this.logger.info('lougout success.');
             if (callback != null) { return callback(data); }
             return null;
