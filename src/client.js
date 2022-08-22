@@ -588,8 +588,25 @@ class Client extends EventEmitter {
         });
     }
 
-    deleteChannel(channelID, callback) {
-        return this._apiCall('DELETE', `/channels/${channelID}`, null, (data, _headers) => {
+
+    getChannelByName(channelName, teamID, callback) {
+        return this._apiCall('GET', `/teams/${teamID}/channels/name/${channelName}`, null, (data, _headers) => {
+            this.logger.info('Got Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
+    restoreChannel(channelID, callback) {
+        return this._apiCall('POST', `/channels/${channelID}/restore`, null, (data, _headers) => {
+            this.logger.info('Restored Channel.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
+    }
+
+    deleteChannel(channelID, permanent, callback) {
+        return this._apiCall('DELETE', `/channels/${channelID}${permanent && '?' + 'permanent=true'}`, null, (data, _headers) => {
             this.logger.info('Deleted Channel.');
             if (callback != null) { return callback(data); }
             return null;
@@ -627,6 +644,14 @@ class Client extends EventEmitter {
                 return isNameEqual || isDisplayNameEqual;
             });
         return this.channels[foundChannel] || null;
+    }
+
+    logout(callback) {
+        return this._apiCall('POST', `/users/logout`, null, (data, _headers) => {
+            this.logger.info('lougout success.');
+            if (callback != null) { return callback(data); }
+            return null;
+        });
     }
 
     static _chunkMessage(msg) {
