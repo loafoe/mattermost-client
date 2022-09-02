@@ -26,6 +26,14 @@ const useTLS = !(process.env.MATTERMOST_USE_TLS || '').match(/^false|0|no|off$/i
  * @property {boolean} [httpProxy] Is using an HTTP proxy, default false
  * @property {Object} [logger]
  * */
+/**
+ * @typedef {Object} ChannelData
+ * @property {string} name The unique handle for the channel, will be present in the channel URL
+ * @property {string} display_name The non-unique UI name for the channel
+ * @property {string} [purpose] A short description of the purpose of the channel
+ * @property {string} [header] Markdown-formatted text to display in the header of the channel
+ * @property {string} type 'O' for a public channel, 'P' for a private channel
+ */
 class Client extends EventEmitter {
     /**
      * @param {string} host The mattermost host
@@ -567,6 +575,14 @@ class Client extends EventEmitter {
         });
     }
 
+    /**
+     * Create a new channel on mattermost for the specified team
+     *
+     * @param {ChannelData} channelData
+     * @param {string} teamID The team ID of the team to create the channel on
+     * @param callback Function to run after channel was created
+     * @return {*}
+     */
     createChannel(channelData, teamID, callback) {
         const postData = {
             team_id: teamID,
@@ -582,15 +598,15 @@ class Client extends EventEmitter {
         }
 
         return this._apiCall('POST', '/channels', postData, (data, _headers) => {
-            this.logger.info('Created Channel.');
+            this.logger.info('Channel %s created.', channelData.display_name);
             if (callback != null) { return callback(data); }
             return null;
         });
     }
 
-    getChannelByName(channelName, teamID, callback) {
+    getTeamChannelByName(teamID, channelName, callback) {
         return this._apiCall('GET', `/teams/${teamID}/channels/name/${channelName}`, null, (data, _headers) => {
-            this.logger.info('Got Channel.');
+            this.logger.info('Got Channel %s.', channelName);
             if (callback != null) { return callback(data); }
             return null;
         });
@@ -598,7 +614,7 @@ class Client extends EventEmitter {
 
     restoreChannel(channelID, callback) {
         return this._apiCall('POST', `/channels/${channelID}/restore`, null, (data, _headers) => {
-            this.logger.info('Restored Channel.');
+            this.logger.info('Channel %s restored.', channelID);
             if (callback != null) { return callback(data); }
             return null;
         });
@@ -606,7 +622,7 @@ class Client extends EventEmitter {
 
     deleteChannel(channelID, permanent, callback) {
         return this._apiCall('DELETE', `/channels/${channelID}${permanent && '?permanent=true'}`, null, (data, _headers) => {
-            this.logger.info('Deleted Channel.');
+            this.logger.info('Channel %s deleted.', channelID);
             if (callback != null) { return callback(data); }
             return null;
         });
@@ -621,7 +637,7 @@ class Client extends EventEmitter {
         }
 
         return this._apiCall('POST', `/channels/${channelID}/members`, postData, (data, _headers) => {
-            this.logger.info('Added Member to Channel.');
+            this.logger.info('User %s added to Channel %s.', userID, channelID);
             if (callback != null) { return callback(data); }
             return null;
         });
@@ -629,7 +645,7 @@ class Client extends EventEmitter {
 
     removeUserFromChannel(channelID, userID, callback) {
         return this._apiCall('POST', `/channels/${channelID}/members/${userID}`, null, (data, _headers) => {
-            this.logger.info('Removed Member from Channel.');
+            this.logger.info('User %s removed from Channel %s.', userID, channelID);
             if (callback != null) { return callback(data); }
             return null;
         });
@@ -647,7 +663,7 @@ class Client extends EventEmitter {
 
     logout(callback) {
         return this._apiCall('POST', '/users/logout', null, (data, _headers) => {
-            this.logger.info('lougout success.');
+            this.logger.info('User %d logout success.', data.username);
             if (callback != null) { return callback(data); }
             return null;
         });
