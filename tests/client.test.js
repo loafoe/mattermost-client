@@ -55,8 +55,10 @@ describe('Mattermost login ...', () => {
 
 describe('Client callbacks', () => {
     let tested;
+    beforeAll(() => {
+        jest.useFakeTimers({legacyFakeTimers: true,});
+    });
     beforeEach(() => {
-        jest.useFakeTimers();
         tested = new Client(SERVER_URL, 'dummy', {});
         jest.spyOn(tested, 'getMe');
         jest.spyOn(tested, 'getPreferences');
@@ -67,6 +69,10 @@ describe('Client callbacks', () => {
         jest.spyOn(tested, 'connect');
         jest.spyOn(tested, '_send');
     });
+
+    afterAll(() => {
+        jest.useRealTimers();
+    })
 
     describe('_onLogin', () => {
         test('should reconnect when bad data', () => {
@@ -330,6 +336,9 @@ describe('Simple requesters', () => {
 });
 
 describe('Connect / Reconnect / Disconnect', () => {
+    beforeEach(() => {
+        jest.useFakeTimers({legacyFakeTimers: true,});
+    });
     test('should connect to mattermost', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.connect();
@@ -370,7 +379,6 @@ describe('Connect / Reconnect / Disconnect', () => {
         const tested = new Client(SERVER_URL, 'dummy', {});
 
         beforeEach(() => {
-            jest.useFakeTimers();
             jest.clearAllTimers();
             jest.spyOn(global, 'setInterval');
             jest.spyOn(tested, 'reconnect').mockImplementation();
@@ -441,7 +449,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     });
 
     test('should reconnect', () => {
-        jest.useFakeTimers();
         jest.spyOn(global, 'clearInterval');
         jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
@@ -457,7 +464,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     });
 
     test('should avoid infinite reconnection', () => {
-        jest.useFakeTimers();
         jest.spyOn(global, 'clearInterval');
         jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
@@ -473,7 +479,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     });
 
     test('should login from reconnect', () => {
-        jest.useFakeTimers();
         jest.spyOn(global, 'clearInterval');
         jest.spyOn(global, 'setTimeout');
         const tested = new Client(SERVER_URL, 'dummy', {});
@@ -490,7 +495,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     });
 
     test('should login from reconnect with token', () => {
-        jest.useFakeTimers();
         const tested = new Client(SERVER_URL, 'dummy', {});
         tested.tokenLogin('obiwan.kenobi.rules');
         jest.spyOn(tested, 'tokenLogin');
@@ -510,7 +514,6 @@ describe('Connect / Reconnect / Disconnect', () => {
     });
 
     test('should disconnect when connected', () => {
-        jest.useFakeTimers();
         jest.spyOn(global, 'clearInterval');
 
         const tested = new Client(SERVER_URL, 'dummy', {});
@@ -521,6 +524,10 @@ describe('Connect / Reconnect / Disconnect', () => {
         expect(tested.disconnect()).toBeTruthy();
         expect(clearInterval).toBeCalled();
         expect(tested.ws.close).toBeCalled();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 });
 
