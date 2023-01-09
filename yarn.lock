@@ -3338,8 +3338,8 @@ write-file-atomic@^4.0.1:
     signal-exit "^3.0.7"
 
 ws@^8.6.0:
-  version "8.11.0"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-8.11.0.tgz#6a0d36b8edfd9f96d8b25683db2f8d7de6e8e143"
+  version "8.12.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.12.0.tgz#485074cc392689da78e1828a9ff23585e06cddd8"
 
 xml@^1.0.1:
   version "1.0.1"
