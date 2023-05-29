@@ -30,7 +30,7 @@
   "homepage": "https://github.com/loafoe/mattermost-client#readme",
   "dependencies": {
     "extend": "^3.0.2",
-    "https-proxy-agent": "^6.2.0",
+    "https-proxy-agent": "^7.0.0",
     "log": "^6.1.0",
     "request": "^2.88.0",
     "set-value": ">=4.0.1",
