@@ -67,4 +67,4 @@ Testing is done using `jest`.
 
 Best to read this document, to understand how jest works. https://jestjs.io/docs/getting-started
 
-The tests are all in `tests/client.test.js`. They all have a generic build up. It needs a dummy mattermost-installation available under `test.foo.bar` - easiest is to use Docker for that. *Some words on how to set up this local Docker easily*
+The tests are all in `tests/client.test.js`. They all have a generic build up. It needs a dummy mattermost-installation available under `test.foo.bar` - easiest is to use Docker for that. *Some words on how to set up this local Docker easily.*
