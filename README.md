@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/loafoe/mattermost-client/workflows/CI/badge.svg)](https://github.com/loafoe/mattermost-client/actions?workflow=CI)
 
-Mattermost client which uses the Web API and websockets
+Mattermost client which uses the Web API and websockets.
 
 # Features
 
@@ -36,7 +36,7 @@ As of version `5.0.0` of Mattermost might introduce backwards incompatible API c
 
 ## Older versions of Mattermost
 
-For interaction with Mattermost versions please use version of the library matching the Mattermost version
+For interaction with Mattermost versions please use version of the library matching the Mattermost version.
 
 # TODO
 
@@ -44,4 +44,4 @@ For interaction with Mattermost versions please use version of the library match
 
 # License
 
-The code is licensed under MIT
+The code is licensed under MIT.
