@@ -3772,8 +3772,8 @@ write-file-atomic@^4.0.2:
     signal-exit "^3.0.7"
 
 ws@^8.6.0:
-  version "8.15.0"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-8.15.0.tgz#db080a279260c5f532fc668d461b8346efdfcf86"
+  version "8.15.1"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.15.1.tgz#271ba33a45ca0cc477940f7f200cd7fba7ee1997"
 
 xml@^1.0.1:
   version "1.0.1"
